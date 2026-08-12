@@ -15,10 +15,14 @@ export const enquiries = sqliteTable("enquiries", {
   status: text("status").notNull().default("new"),
   priority: text("priority").notNull().default("normal"),
   assignedTo: text("assigned_to"),
+  internalNotes: text("internal_notes"),
+  nextActionAt: integer("next_action_at", { mode: "timestamp_ms" }),
+  viewingAt: integer("viewing_at", { mode: "timestamp_ms" }),
 }, (table) => [
   index("enquiries_created_at_idx").on(table.createdAt),
   index("enquiries_status_idx").on(table.status),
   index("enquiries_email_idx").on(table.email),
+  index("enquiries_next_action_idx").on(table.nextActionAt),
 ]);
 
 export type Enquiry = typeof enquiries.$inferSelect;

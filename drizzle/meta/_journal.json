@@ -8,6 +8,13 @@
       "when": 1786545299362,
       "tag": "0000_nifty_mattie_franklin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786549162762,
+      "tag": "0001_sweet_grandmaster",
+      "breakpoints": true
     }
   ]
 }
