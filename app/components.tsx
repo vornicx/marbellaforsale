@@ -29,70 +29,49 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
     if (!morphLogo) return;
     const header = headerRef.current;
     const logo = logoRef.current;
-    const media = document.querySelector<HTMLElement>(".hero-media");
     const content = document.querySelector<HTMLElement>(".hero-content");
     const cue = document.querySelector<HTMLElement>(".scroll-cue");
     if (!header || !logo) return;
     let frame = 0;
-    let targetScroll = window.scrollY;
-    let renderedScroll = targetScroll;
-    let velocity = 0;
-    let lastRendered = -1;
     const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
-    const easePremium = (value: number) => value < .5 ? 8 * Math.pow(value, 4) : 1 - Math.pow(-2 * value + 2, 4) / 2;
+    const smoothstep = (from: number, to: number, value: number) => {
+      const progress = clamp((value - from) / Math.max(to - from, 1));
+      return progress * progress * (3 - 2 * progress);
+    };
     const render = () => {
-      const delta = targetScroll - renderedScroll;
-      velocity = velocity * .76 + delta * .08;
-      renderedScroll += velocity;
-      if (Math.abs(delta) < .035 && Math.abs(velocity) < .035) {
-        renderedScroll = targetScroll;
-        velocity = 0;
-      }
+      frame = 0;
+      const scroll = Math.max(window.scrollY, 0);
       const mobile = window.innerWidth <= 800;
-      const startTop = window.innerHeight * (mobile ? .27 : .29);
+      const startTop = Math.min(Math.max(window.innerHeight * (mobile ? .27 : .28), mobile ? 150 : 132), mobile ? 240 : 260);
       const endTop = mobile ? 20 : 29;
-      const distance = mobile ? 360 : 520;
-      const linear = clamp(renderedScroll / distance);
-      const progress = easePremium(linear);
+      const travelStart = mobile ? 56 : 72;
+      const travelEnd = mobile ? 330 : 430;
+      const progress = smoothstep(travelStart, travelEnd, scroll);
       const startScale = mobile ? 2.65 : 4.2;
-      if (Math.abs(renderedScroll - lastRendered) > .01) {
-        const logoTop = startTop + (endTop - startTop) * progress;
-        const logoScale = startScale + (1 - startScale) * progress;
-        logo.style.transform = `translate3d(-50%, ${logoTop}px, 0) scale(${logoScale})`;
-        header.classList.toggle("is-scrolled", linear > .9);
-        header.style.setProperty("--motion-progress", linear.toFixed(4));
-        lastRendered = renderedScroll;
-      }
-      const heroProgress = clamp(renderedScroll / Math.max(window.innerHeight * .72, 1));
-      if (media) media.style.transform = `translate3d(0, ${heroProgress * 34}px, 0) scale(${1.018 + heroProgress * .035})`;
+      const logoTop = startTop + (endTop - startTop) * progress;
+      const logoScale = startScale + (1 - startScale) * progress;
+      logo.style.transform = `translate3d(-50%, ${logoTop.toFixed(3)}px, 0) scale(${logoScale.toFixed(5)})`;
+      header.classList.toggle("is-scrolled", progress > .94);
+      header.style.setProperty("--motion-progress", progress.toFixed(4));
       if (content) {
-        const contentProgress = clamp(renderedScroll / (distance * .7));
-        content.style.opacity = `${1 - contentProgress}`;
-        content.style.filter = `blur(${contentProgress * 3}px)`;
-        content.style.transform = `translate3d(0, ${contentProgress * -22}px, 0)`;
+        const claimExit = smoothstep(0, travelStart, scroll);
+        content.style.opacity = `${(1 - claimExit).toFixed(4)}`;
+        content.style.transform = `translate3d(0, ${(-8 * claimExit).toFixed(3)}px, 0)`;
       }
-      if (cue) cue.style.opacity = `${clamp(1 - linear * 1.45)}`;
-      if (Math.abs(targetScroll - renderedScroll) >= .035 || Math.abs(velocity) >= .035) frame = window.requestAnimationFrame(render);
-      else frame = 0;
+      if (cue) cue.style.opacity = `${(1 - smoothstep(0, travelStart, scroll)).toFixed(4)}`;
     };
     const requestUpdate = () => {
-      targetScroll = window.scrollY;
       if (!frame) frame = window.requestAnimationFrame(render);
     };
     logo.style.top = "0";
     render();
-    const handleResize = () => {
-      targetScroll = window.scrollY;
-      lastRendered = -1;
-      requestUpdate();
-    };
 
     window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", requestUpdate);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", requestUpdate);
     };
   }, [morphLogo]);
   return (
