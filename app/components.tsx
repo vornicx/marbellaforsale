@@ -267,18 +267,54 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
   );
 }
 
-export function EnquiryForm({ propertyTitle }: { propertyTitle?: string }) {
-  const [sent, setSent] = useState(false);
-  if (sent) return <div className="form-success"><span>✓</span><h3>Thank you.</h3><p>One of our Marbella advisors will contact you personally within one business day.</p></div>;
+export function EnquiryForm({ propertyTitle, propertyRef, source = "contact" }: { propertyTitle?: string; propertyRef?: string; source?: "contact" | "property" | "valuation" | "private-search" }) {
+  const [reference, setReference] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function submitEnquiry(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSending(true);
+    setError("");
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    try {
+      const response = await fetch("/api/enquiries", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          firstName: values.get("firstName"),
+          lastName: values.get("lastName"),
+          email: values.get("email"),
+          phone: values.get("phone"),
+          message: values.get("message"),
+          privacyAccepted: values.get("privacy") === "accepted",
+          source,
+          propertyTitle,
+          propertyRef,
+        }),
+      });
+      const result = await response.json() as { error?: string; reference?: string };
+      if (!response.ok || !result.reference) throw new Error(result.error || "Unable to send enquiry.");
+      setReference(result.reference);
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : "Unable to send enquiry.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (reference) return <div className="form-success" aria-live="polite"><span>✓</span><h3>Thank you.</h3><p>Your private enquiry has been received. One of our Marbella advisors will contact you personally within one business day.</p><small>Reference {reference}</small></div>;
   return (
-    <form className="enquiry-form" onSubmit={(e) => { e.preventDefault(); setSent(true); }}>
+    <form className="enquiry-form" onSubmit={submitEnquiry}>
       {propertyTitle && <input type="hidden" name="property" value={propertyTitle} />}
       <div className="form-row"><label>First name<input required name="firstName" /></label><label>Last name<input required name="lastName" /></label></div>
       <label>Email address<input required type="email" name="email" /></label>
       <label>Phone number<input required type="tel" name="phone" placeholder="+34" /></label>
       <label>How can we help?<textarea name="message" defaultValue={propertyTitle ? `I would like more information about ${propertyTitle}.` : "I would like to discuss my property requirements."} /></label>
-      <label className="consent"><input required type="checkbox" /> <span>I have read and accept the privacy policy.</span></label>
-      <button className="button button-dark" type="submit">Send private enquiry <ArrowIcon /></button>
+      <label className="consent"><input required type="checkbox" name="privacy" value="accepted" /> <span>I have read and accept the <Link href="/privacy">privacy policy</Link>.</span></label>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <button className="button button-dark" type="submit" disabled={sending}>{sending ? "Sending securely…" : "Send private enquiry"} {!sending && <ArrowIcon />}</button>
     </form>
   );
 }
