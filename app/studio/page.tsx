@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getDb } from "../../db";
 import { enquiries } from "../../db/schema";
 import { getChatGPTUser, requireChatGPTUser } from "../chatgpt-auth";
-import { properties } from "../data";
+import { getManagedProperties, getPreviewProperties } from "../property-store";
 import { StudioDashboard, type StudioLead } from "./studio-dashboard";
 
 export const metadata: Metadata = { title: "Owner Studio", robots: { index: false, follow: false } };
@@ -17,11 +17,13 @@ export default async function StudioPage() {
   const isPublicPreview = host.includes("vercel.app") || host.startsWith("terminal.local") || process.env.VERCEL === "1";
 
   if (!user && isPublicPreview) {
-    return <StudioDashboard initialLeads={demoLeads} propertyCount={properties.length} userName="Marbella team" previewMode />;
+    const previewProperties = getPreviewProperties();
+    return <StudioDashboard initialLeads={demoLeads} initialProperties={previewProperties} userName="Marbella team" previewMode />;
   }
 
   const authenticatedUser = user || await requireChatGPTUser("/studio");
   const db = await getDb();
+  const managedProperties = await getManagedProperties(true);
   const records = await db.select().from(enquiries).orderBy(desc(enquiries.createdAt)).limit(250);
   const leads: StudioLead[] = records.map((lead) => ({
     ...lead,
@@ -29,10 +31,10 @@ export default async function StudioPage() {
     updatedAt: lead.updatedAt.toISOString(),
     nextActionAt: lead.nextActionAt?.toISOString() || null,
     viewingAt: lead.viewingAt?.toISOString() || null,
-    propertySlug: properties.find((property) => property.ref === lead.propertyRef)?.slug || null,
+    propertySlug: managedProperties.find((property) => property.ref === lead.propertyRef)?.slug || null,
   }));
 
-  return <StudioDashboard initialLeads={leads} propertyCount={properties.length} userName={authenticatedUser.fullName || "Marbella team"} />;
+  return <StudioDashboard initialLeads={leads} initialProperties={managedProperties} userName={authenticatedUser.fullName || "Marbella team"} />;
 }
 
 const demoLeads: StudioLead[] = [

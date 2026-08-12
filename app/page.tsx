@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { Header, Footer, PropertyCard, ArrowIcon, SearchPanel, LuxuryMotion } from "./components";
-import { areas, imageSet, properties } from "./data";
+import { areas, imageSet } from "./data";
+import { getManagedProperties } from "./property-store";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const properties = await getManagedProperties();
   const schema = {
     "@context": "https://schema.org", "@type": "RealEstateAgent", name: "Marbella For Sale",
     url: "https://www.marbellaforsale.com/", telephone: "+34 952 907 386", email: "info@marbellaforsale.com",

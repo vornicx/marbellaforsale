@@ -2,19 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowIcon, EnquiryForm, Footer, Header, PropertyCard } from "../../components";
-import { properties } from "../../data";
+import { properties as staticProperties } from "../../data";
+import { getManagedProperties } from "../../property-store";
 import { PropertyGallery } from "../../property-gallery";
 
-export function generateStaticParams() { return properties.map(({ slug }) => ({ slug })); }
+export const dynamic = "force-dynamic";
+
+export function generateStaticParams() { return staticProperties.map(({ slug }) => ({ slug })); }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const { slug } = await params; const property = properties.find((item) => item.slug === slug);
+  const { slug } = await params; const properties = await getManagedProperties(); const property = properties.find((item) => item.slug === slug);
   if (!property) return {};
   return { title: `${property.title} — ${property.location}`, description: `${property.priceLabel}. ${property.beds} bedrooms, ${property.baths} bathrooms and ${property.built} m² in ${property.location}. ${property.description}` };
 }
 
 export default async function PropertyPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params; const property = properties.find((item) => item.slug === slug);
+  const { slug } = await params; const properties = await getManagedProperties(); const property = properties.find((item) => item.slug === slug);
   if (!property) notFound();
   const related = properties.filter((item) => item.slug !== property.slug && (item.area === property.area || item.type === property.type)).slice(0, 3);
   const schema = { "@context": "https://schema.org", "@type": "RealEstateListing", name: property.title, description: property.description, url: `https://www.marbellaforsale.com/properties/${property.slug}`, image: property.gallery, offers: { "@type": "Offer", priceCurrency: "EUR", price: property.price, availability: "https://schema.org/InStock" }, address: { "@type": "PostalAddress", addressLocality: property.location, addressRegion: "Málaga", addressCountry: "ES" } };

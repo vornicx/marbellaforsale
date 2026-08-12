@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import type { ManagedProperty } from "../property-store";
 
 export type StudioLead = {
   id: string;
@@ -25,7 +26,7 @@ export type StudioLead = {
 };
 
 type LeadChanges = Partial<Pick<StudioLead, "status" | "priority" | "assignedTo" | "internalNotes" | "nextActionAt" | "viewingAt">>;
-type StudioSection = "overview" | "enquiries" | "viewings";
+type StudioSection = "overview" | "enquiries" | "viewings" | "properties";
 
 const statusOptions = ["new", "contacted", "qualified", "viewing", "valuation", "closed", "archived"];
 const statusLabels: Record<string, string> = {
@@ -64,8 +65,9 @@ function toDateInput(value: string | null) {
 
 function fromDateInput(value: string) { return value ? new Date(value).toISOString() : null; }
 
-export function StudioDashboard({ initialLeads, propertyCount, userName, previewMode = false }: { initialLeads: StudioLead[]; propertyCount: number; userName: string; previewMode?: boolean }) {
+export function StudioDashboard({ initialLeads, initialProperties, userName, previewMode = false }: { initialLeads: StudioLead[]; initialProperties: ManagedProperty[]; userName: string; previewMode?: boolean }) {
   const [leads, setLeads] = useState(initialLeads);
+  const [managedProperties, setManagedProperties] = useState(initialProperties);
   const [section, setSection] = useState<StudioSection>("overview");
   const [statusFilter, setStatusFilter] = useState("open");
   const [sourceFilter, setSourceFilter] = useState("all");
@@ -73,11 +75,14 @@ export function StudioDashboard({ initialLeads, propertyCount, userName, preview
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("newest");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const openLeads = useMemo(() => leads.filter((lead) => !["closed", "archived"].includes(lead.status)), [leads]);
   const selectedLead = leads.find((lead) => lead.id === selectedLeadId) || null;
+  const selectedProperty = managedProperties.find((property) => property.id === selectedPropertyId) || null;
+  const propertyCount = managedProperties.filter((property) => property.status === "published").length;
   const viewingLeads = useMemo(() => leads.filter((lead) => lead.viewingAt && !["closed", "archived"].includes(lead.status)).sort((a, b) => new Date(a.viewingAt || 0).getTime() - new Date(b.viewingAt || 0).getTime()), [leads]);
   const nextActions = useMemo(() => openLeads.filter((lead) => lead.nextActionAt).sort((a, b) => new Date(a.nextActionAt || 0).getTime() - new Date(b.nextActionAt || 0).getTime()).slice(0, 5), [openLeads]);
   const visibleLeads = useMemo(() => {
@@ -93,13 +98,13 @@ export function StudioDashboard({ initialLeads, propertyCount, userName, preview
   const priorityLeads = (openLeads.filter((lead) => lead.priority === "high").length ? openLeads.filter((lead) => lead.priority === "high") : openLeads).slice(0, 5);
 
   useEffect(() => {
-    if (!selectedLead) return;
+    if (!selectedLead && !selectedProperty) return;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSelectedLeadId(null); };
     window.addEventListener("keydown", close);
     return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", close); };
-  }, [selectedLead]);
+  }, [selectedLead, selectedProperty]);
 
   async function updateLead(id: string, changes: LeadChanges) {
     const previous = leads;
@@ -123,6 +128,34 @@ export function StudioDashboard({ initialLeads, propertyCount, userName, preview
 
   function openEnquiries(filter = "open") { setStatusFilter(filter); setSection("enquiries"); }
 
+  async function saveProperty(property: ManagedProperty) {
+    const previous = managedProperties;
+    setError("");
+    setUpdating(property.id);
+    const next = { ...property, updatedAt: new Date().toISOString() };
+    setManagedProperties((current) => current.map((item) => item.id === property.id ? next : item));
+    if (previewMode) { setUpdating(null); return true; }
+    try {
+      const response = await fetch(`/api/studio/properties/${encodeURIComponent(property.id)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
+      const result = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(result.error || "The property could not be saved.");
+      return true;
+    } catch (updateError) {
+      setManagedProperties(previous);
+      setError(updateError instanceof Error ? updateError.message : "The property could not be saved.");
+      return false;
+    } finally {
+      setUpdating(null);
+    }
+  }
+
+  function createProperty() {
+    const id = `new-property-${Date.now()}`;
+    const property: ManagedProperty = { id, slug: id, title: "New private residence", location: "Marbella, Málaga", area: "Marbella", type: "Villa", price: 0, priceLabel: "€0", beds: 0, baths: 0, built: 0, image: "/images/properties/r5019220/01.jpg", gallery: ["/images/properties/r5019220/01.jpg"], ref: `MFS-${String(Date.now()).slice(-6)}`, description: "Add the considered property description before publishing this residence.", features: [], status: "draft", featured: false, updatedAt: new Date().toISOString() };
+    setManagedProperties((current) => [property, ...current]);
+    setSelectedPropertyId(id);
+  }
+
   return <main className="studio">
     <aside className="studio-sidebar">
       <Link href="/" className="wordmark"><strong>MARBELLA</strong><span>FOR SALE</span></Link>
@@ -130,14 +163,14 @@ export function StudioDashboard({ initialLeads, propertyCount, userName, preview
         <button className={section === "overview" ? "active" : ""} onClick={() => setSection("overview")}>Overview</button>
         <button className={section === "enquiries" ? "active" : ""} onClick={() => openEnquiries()}>Enquiries <span>{openLeads.length}</span></button>
         <button className={section === "viewings" ? "active" : ""} onClick={() => setSection("viewings")}>Viewings <span>{viewingLeads.length}</span></button>
-        <Link href="/properties">Properties <small>{propertyCount} live</small></Link>
+        <button className={section === "properties" ? "active" : ""} onClick={() => setSection("properties")}>Properties <span>{propertyCount}</span></button>
         <button disabled>Content &amp; SEO <small>Next</small></button>
       </nav>
       <Link href="/">Return to website <ArrowIcon /></Link>
     </aside>
 
     <section className="studio-main">
-      <header className="studio-header"><div><p className="studio-kicker">Marbella For Sale · Owner Studio</p><h1>{section === "overview" ? `Good day, ${userName}.` : section === "enquiries" ? "Enquiry pipeline" : "Private viewings"}</h1><p>{section === "overview" ? "A live view of demand, priorities and next commercial actions." : section === "enquiries" ? "Every website enquiry, its context and its current commercial status." : "Scheduled appointments and the clients behind them."}</p></div>{previewMode ? <span className="studio-preview-label">Demonstration workspace</span> : <Link href="/signout-with-chatgpt?return_to=/" className="studio-account" aria-label="Sign out">MF</Link>}</header>
+      <header className="studio-header"><div><p className="studio-kicker">Marbella For Sale · Owner Studio</p><h1>{section === "overview" ? `Good day, ${userName}.` : section === "enquiries" ? "Enquiry pipeline" : section === "viewings" ? "Private viewings" : "Property portfolio"}</h1><p>{section === "overview" ? "A live view of demand, priorities and next commercial actions." : section === "enquiries" ? "Every website enquiry, its context and its current commercial status." : section === "viewings" ? "Scheduled appointments and the clients behind them." : "Create, review and publish every residence from one considered workspace."}</p></div>{previewMode ? <span className="studio-preview-label">Demonstration workspace</span> : <Link href="/signout-with-chatgpt?return_to=/" className="studio-account" aria-label="Sign out">MF</Link>}</header>
       {previewMode && <div className="studio-preview-note"><span>Secure preview</span><p>Sample enquiries demonstrate the complete owner workflow. No client information is exposed in this public view.</p></div>}
       {error && <p className="studio-alert" role="alert">{error}</p>}
 
@@ -145,7 +178,7 @@ export function StudioDashboard({ initialLeads, propertyCount, userName, preview
         <div className="studio-kpis">
           <button className="kpi" onClick={() => openEnquiries("new")}><span>New enquiries</span><strong>{leads.filter((lead) => lead.status === "new").length}</strong><small>Awaiting first contact</small><ArrowIcon /></button>
           <button className="kpi" onClick={() => openEnquiries("qualified")}><span>Qualified buyers</span><strong>{leads.filter((lead) => ["qualified", "viewing"].includes(lead.status)).length}</strong><small>Active purchase intent</small><ArrowIcon /></button>
-          <Link className="kpi" href="/properties"><span>Live properties</span><strong>{propertyCount}</strong><small>Published with verified imagery</small><ArrowIcon /></Link>
+          <button className="kpi" onClick={() => setSection("properties")}><span>Live properties</span><strong>{propertyCount}</strong><small>Published with verified imagery</small><ArrowIcon /></button>
           <button className="kpi" onClick={() => openEnquiries()}><span>Open opportunities</span><strong>{openLeads.length}</strong><small>{leads.filter((lead) => lead.source === "valuation" && !["closed", "archived"].includes(lead.status)).length} seller leads</small><ArrowIcon /></button>
         </div>
         <div className="studio-grid">
@@ -174,9 +207,12 @@ export function StudioDashboard({ initialLeads, propertyCount, userName, preview
         <div className="viewings-summary"><span>{viewingLeads.length} scheduled</span><p>Every appointment remains connected to the original enquiry, property and follow-up plan.</p></div>
         {viewingLeads.length ? <div className="viewing-board">{viewingLeads.map((lead) => <button type="button" className="viewing-card" onClick={() => setSelectedLeadId(lead.id)} key={lead.id}><div><span>{formatDate(lead.viewingAt, false)}</span><strong>{new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }).format(new Date(lead.viewingAt || ""))}</strong></div><section><small>{lead.propertyRef || "Private appointment"}</small><h2>{lead.propertyTitle || "Confidential property consultation"}</h2><p>{lead.firstName} {lead.lastName} · {lead.phone}</p></section><ArrowIcon /></button>)}</div> : <EmptyStudio title="No viewings scheduled" copy="Open an enquiry and add a viewing date. It will appear here immediately." />}
       </section>}
+
+      {section === "properties" && <PropertyManager properties={managedProperties} onCreate={createProperty} onOpen={(id) => setSelectedPropertyId(id)} />}
     </section>
 
     {selectedLead && <LeadDrawer key={selectedLead.id} lead={selectedLead} saving={updating === selectedLead.id} onClose={() => setSelectedLeadId(null)} onSave={(changes) => updateLead(selectedLead.id, changes)} />}
+    {selectedProperty && <PropertyDrawer key={selectedProperty.id} property={selectedProperty} saving={updating === selectedProperty.id} previewMode={previewMode} onClose={() => setSelectedPropertyId(null)} onSave={saveProperty} />}
   </main>;
 }
 
@@ -221,6 +257,104 @@ function LeadDrawer({ lead, saving, onClose, onSave }: { lead: StudioLead; savin
         <div className="drawer-form-grid"><label>Next action<input type="datetime-local" value={nextActionAt} onChange={(event) => setNextActionAt(event.target.value)} /></label><label>Private viewing<input type="datetime-local" value={viewingAt} onChange={(event) => { setViewingAt(event.target.value); if (event.target.value && status !== "viewing") setStatus("viewing"); }} /></label></div>
         <label>Internal notes<textarea value={internalNotes} onChange={(event) => setInternalNotes(event.target.value)} placeholder="Context, preferences, budget, next steps…" /></label>
         <button className="drawer-save" type="submit" disabled={saving}>{saving ? "Saving…" : "Save enquiry"}<ArrowIcon /></button>
+      </form>
+    </aside>
+  </div>;
+}
+
+function PropertyManager({ properties, onCreate, onOpen }: { properties: ManagedProperty[]; onCreate: () => void; onOpen: (id: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState("all");
+  const visible = properties.filter((property) => {
+    const search = query.trim().toLowerCase();
+    return (status === "all" || property.status === status) && (!search || [property.title, property.location, property.area, property.ref].join(" ").toLowerCase().includes(search));
+  });
+  const counts = { published: properties.filter((property) => property.status === "published").length, draft: properties.filter((property) => property.status === "draft").length, archived: properties.filter((property) => property.status === "archived").length };
+
+  return <section className="property-manager">
+    <div className="property-manager-summary">
+      <div><span>Portfolio control</span><h2>{visible.length} residences</h2><p>{counts.published} live · {counts.draft} draft · {counts.archived} archived</p></div>
+      <button type="button" onClick={onCreate}>Add property <span>＋</span></button>
+    </div>
+    <div className="property-manager-toolbar">
+      <label className="property-manager-search"><SearchIcon /><span className="sr-only">Search properties</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Title, area or reference" /></label>
+      <div role="group" aria-label="Property status">{["all", "published", "draft", "archived"].map((option) => <button type="button" className={status === option ? "active" : ""} onClick={() => setStatus(option)} key={option}>{option === "all" ? "All" : option}</button>)}</div>
+    </div>
+    <div className="property-manager-list">
+      {visible.map((property) => <button type="button" className="managed-property-card" onClick={() => onOpen(property.id)} key={property.id}>
+        <div className="managed-property-image"><img src={property.image} alt="" />{property.featured && <span>Featured</span>}</div>
+        <div className="managed-property-copy"><small>{property.ref} · {property.location}</small><h3>{property.title}</h3><p>{property.priceLabel} · {property.beds} beds · {property.built.toLocaleString("en-GB")} m²</p></div>
+        <span className={`property-state property-state-${property.status}`}>{property.status}</span><time>{property.updatedAt === new Date(0).toISOString() ? "Original listing" : `Edited ${relativeTime(property.updatedAt)}`}</time><ArrowIcon />
+      </button>)}
+    </div>
+    {!visible.length && <EmptyStudio title="No properties in this view" copy="Adjust the filter or create a new private residence." />}
+  </section>;
+}
+
+function PropertyDrawer({ property, saving, previewMode, onClose, onSave }: { property: ManagedProperty; saving: boolean; previewMode: boolean; onClose: () => void; onSave: (property: ManagedProperty) => Promise<boolean> }) {
+  const [draft, setDraft] = useState(property);
+  const [gallery, setGallery] = useState(property.gallery.join("\n"));
+  const [features, setFeatures] = useState(property.features.join("\n"));
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const change = <K extends keyof ManagedProperty>(key: K, value: ManagedProperty[K]) => setDraft((current) => ({ ...current, [key]: value }));
+  const number = (value: string) => value === "" ? 0 : Number(value);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const galleryItems = gallery.split("\n").map((item) => item.trim()).filter(Boolean);
+    const featureItems = features.split("\n").map((item) => item.trim()).filter(Boolean);
+    const saved = await onSave({ ...draft, gallery: galleryItems.length ? galleryItems : [draft.image], features: featureItems, priceLabel: new Intl.NumberFormat("en-GB", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(draft.price) });
+    if (saved) onClose();
+  }
+
+  async function addImages(files: FileList | null) {
+    if (!files?.length) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const urls: string[] = [];
+      for (const file of Array.from(files).slice(0, 12)) {
+        if (previewMode) {
+          urls.push(await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error("Image could not be read.")); reader.readAsDataURL(file); }));
+        } else {
+          const form = new FormData();
+          form.set("file", file);
+          const response = await fetch("/api/studio/property-images", { method: "POST", body: form });
+          const result = await response.json() as { url?: string; error?: string };
+          if (!response.ok || !result.url) throw new Error(result.error || "Image could not be uploaded.");
+          urls.push(result.url);
+        }
+      }
+      if (urls.length) {
+        if (!draft.image || draft.image.includes("r5019220/01.jpg") && property.id.startsWith("new-property-")) change("image", urls[0]);
+        setGallery((current) => [...current.split("\n").filter(Boolean), ...urls].join("\n"));
+      }
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Images could not be uploaded.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return <div className="studio-drawer-shell property-drawer-shell">
+    <button className="studio-drawer-backdrop" type="button" onClick={onClose} aria-label="Close property editor" />
+    <aside className="studio-drawer property-drawer" role="dialog" aria-modal="true" aria-labelledby="property-drawer-title">
+      <header><div><span>{draft.ref} · Property editor</span><h2 id="property-drawer-title">Edit<br />residence</h2></div><button type="button" onClick={onClose} aria-label="Close property editor"><CloseIcon /></button></header>
+      <div className="property-editor-preview"><img src={draft.image} alt="Property cover preview" /><div><span className={`property-state property-state-${draft.status}`}>{draft.status}</span><strong>{draft.title}</strong><small>{draft.location}</small></div></div>
+      <form className="drawer-form property-editor-form" onSubmit={submit}>
+        <div className="drawer-form-grid"><label>Publication status<select value={draft.status} onChange={(event) => change("status", event.target.value as ManagedProperty["status"])}><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="property-feature-toggle"><span>Homepage selection</span><span><input type="checkbox" checked={draft.featured} onChange={(event) => change("featured", event.target.checked)} /> Featured residence</span></label></div>
+        <label>Property title<input required value={draft.title} onChange={(event) => change("title", event.target.value)} /></label>
+        <div className="drawer-form-grid"><label>Reference<input required value={draft.ref} onChange={(event) => change("ref", event.target.value.toUpperCase())} /></label><label>Property type<select value={draft.type} onChange={(event) => change("type", event.target.value as ManagedProperty["type"])}><option>Villa</option><option>Penthouse</option><option>Apartment</option><option>Townhouse</option></select></label></div>
+        <div className="drawer-form-grid"><label>Location<input required value={draft.location} onChange={(event) => change("location", event.target.value)} /></label><label>Area<input required value={draft.area} onChange={(event) => change("area", event.target.value)} /></label></div>
+        <div className="property-numbers"><label>Price (€)<input required min="0" type="number" value={draft.price} onChange={(event) => change("price", number(event.target.value))} /></label><label>Bedrooms<input required min="0" type="number" value={draft.beds} onChange={(event) => change("beds", number(event.target.value))} /></label><label>Bathrooms<input required min="0" step="0.5" type="number" value={draft.baths} onChange={(event) => change("baths", number(event.target.value))} /></label><label>Built m²<input required min="0" type="number" value={draft.built} onChange={(event) => change("built", number(event.target.value))} /></label><label>Plot m²<input min="0" type="number" value={draft.plot || ""} onChange={(event) => change("plot", event.target.value ? number(event.target.value) : undefined)} /></label><label>Terrace m²<input min="0" type="number" value={draft.terrace || ""} onChange={(event) => change("terrace", event.target.value ? number(event.target.value) : undefined)} /></label></div>
+        <label className="property-upload"><span>Property photography</span><span className="property-upload-control"><input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple onChange={(event) => addImages(event.target.files)} /><strong>{uploading ? "Uploading photography…" : "Add original images"}</strong><small>JPG, PNG, WebP or AVIF · up to 12 MB each</small></span>{uploadError && <small className="property-upload-error">{uploadError}</small>}</label>
+        <label>Cover image<input required value={draft.image} onChange={(event) => change("image", event.target.value)} /><small>The cover controls the portfolio card and property hero.</small></label>
+        <label>Gallery order<textarea value={gallery} onChange={(event) => setGallery(event.target.value)} placeholder="One verified image path per line" /><small>One image per line. Reorder the lines to control the gallery sequence.</small></label>
+        <label>Badge<input value={draft.badge || ""} onChange={(event) => change("badge", event.target.value || undefined)} placeholder="Featured, New listing, Beachside…" /></label>
+        <label>Description<textarea required value={draft.description} onChange={(event) => change("description", event.target.value)} /></label>
+        <label>Key features<textarea value={features} onChange={(event) => setFeatures(event.target.value)} placeholder="One feature per line" /></label>
+        <button className="drawer-save" type="submit" disabled={saving}>{saving ? "Saving property…" : draft.status === "published" ? "Save and publish" : "Save property"}<ArrowIcon /></button>
       </form>
     </aside>
   </div>;

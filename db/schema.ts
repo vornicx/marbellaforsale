@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const enquiries = sqliteTable("enquiries", {
   id: text("id").primaryKey(),
@@ -27,3 +27,36 @@ export const enquiries = sqliteTable("enquiries", {
 
 export type Enquiry = typeof enquiries.$inferSelect;
 export type NewEnquiry = typeof enquiries.$inferInsert;
+
+export const propertyRecords = sqliteTable("property_records", {
+  id: text("id").primaryKey(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  location: text("location").notNull(),
+  area: text("area").notNull(),
+  type: text("type").notNull(),
+  price: integer("price").notNull(),
+  beds: integer("beds").notNull(),
+  baths: real("baths").notNull(),
+  built: integer("built").notNull(),
+  plot: integer("plot"),
+  terrace: integer("terrace"),
+  image: text("image").notNull(),
+  galleryJson: text("gallery_json").notNull(),
+  badge: text("badge"),
+  ref: text("ref").notNull(),
+  description: text("description").notNull(),
+  featuresJson: text("features_json").notNull(),
+  status: text("status").notNull().default("draft"),
+  featured: integer("featured", { mode: "boolean" }).notNull().default(false),
+}, (table) => [
+  uniqueIndex("property_records_slug_idx").on(table.slug),
+  uniqueIndex("property_records_ref_idx").on(table.ref),
+  index("property_records_status_idx").on(table.status),
+  index("property_records_updated_at_idx").on(table.updatedAt),
+]);
+
+export type PropertyRecord = typeof propertyRecords.$inferSelect;
+export type NewPropertyRecord = typeof propertyRecords.$inferInsert;
