@@ -363,7 +363,7 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
               {compared.map((property) => (
                 <article className="comparison-column" key={property.slug}>
                   <div className="comparison-image"><img src={property.image} alt={`${property.title}, ${property.location}`} /><button type="button" onClick={() => toggleCompare(property)} aria-label={`Remove ${property.title} from comparison`}><CloseIcon /></button></div>
-                  <strong data-label="Residence">{property.title}</strong><span data-label="Price">{property.priceLabel}</span><span data-label="Location">{property.location}</span><span data-label="Bedrooms">{property.beds}</span><span data-label="Bathrooms">{property.baths}</span><span data-label="Built area">{property.built.toLocaleString("en-GB")} m²</span><span data-label="Plot / terrace">{property.plot ? `${property.plot.toLocaleString("en-GB")} m² plot` : `${property.terrace?.toLocaleString("en-GB")} m² terrace`}</span>
+                  <strong data-label="Residence">{property.title}</strong><span data-label="Price">{property.priceLabel}</span><span data-label="Location">{property.location}</span><span data-label="Bedrooms">{property.beds}</span><span data-label="Bathrooms">{property.baths}</span><span data-label="Built area">{property.built.toLocaleString("en-GB")} m²</span><span data-label="Plot / terrace">{property.plot ? `${property.plot.toLocaleString("en-GB")} m² plot` : property.terrace ? `${property.terrace.toLocaleString("en-GB")} m² terrace` : "Available on request"}</span>
                   <Link href={`/properties/${property.slug}`}>View property <ArrowIcon /></Link>
                 </article>
               ))}
