@@ -1,0 +1,146 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import type { Property } from "./data";
+
+export function ArrowIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>;
+}
+
+function HeartIcon({ filled = false }: { filled?: boolean }) {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path className={filled ? "filled" : ""} d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.7-7.5 1.1-1.1a5.5 5.5 0 0 0 0-7.8Z" /></svg>;
+}
+
+export function Header({ transparent = false }: { transparent?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <header className={`site-header ${transparent ? "is-transparent" : ""}`}>
+      <div className="header-inner">
+        <button className="menu-button" type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Open navigation">
+          <span /><span />
+        </button>
+        <Link href="/" className="wordmark" aria-label="Marbella For Sale home">
+          <strong>MARBELLA</strong><span>FOR SALE</span>
+        </Link>
+        <nav className={open ? "nav-open" : ""} aria-label="Primary navigation">
+          <button className="nav-close" onClick={() => setOpen(false)} aria-label="Close navigation">×</button>
+          <Link href="/properties" onClick={() => setOpen(false)}>Properties</Link>
+          <Link href="/developments" onClick={() => setOpen(false)}>New developments</Link>
+          <Link href="/areas" onClick={() => setOpen(false)}>Areas</Link>
+          <Link href="/sell" onClick={() => setOpen(false)}>Sell with us</Link>
+          <Link href="/guides" onClick={() => setOpen(false)}>Insights</Link>
+          <Link href="/about" onClick={() => setOpen(false)}>About</Link>
+        </nav>
+        <div className="header-actions">
+          <button className="language" type="button" aria-label="Change language">EN <span>⌄</span></button>
+          <Link href="/properties?saved=true" className="saved-link" aria-label="Saved properties"><HeartIcon /></Link>
+          <Link href="/contact" className="header-contact">Speak to us</Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function Footer() {
+  return (
+    <footer className="footer">
+      <div className="footer-top shell">
+        <div className="footer-brand">
+          <Link href="/" className="wordmark footer-wordmark"><strong>MARBELLA</strong><span>FOR SALE</span></Link>
+          <p>Exceptional property.<br />Personal service.<br />Local perspective.</p>
+        </div>
+        <div className="footer-column"><span>Explore</span><Link href="/properties">Property search</Link><Link href="/developments">New developments</Link><Link href="/areas">Area guides</Link><Link href="/guides">Buyer&apos;s guides</Link></div>
+        <div className="footer-column"><span>Company</span><Link href="/about">About us</Link><Link href="/sell">Sell a property</Link><Link href="/contact">Contact</Link><Link href="/studio">Owner studio</Link></div>
+        <div className="footer-column contact-column"><span>Visit us</span><p>Edificio Marina Banús, Bl. 4 Local 8<br />Calle Francisco Villalón<br />29660 Puerto Banús, Marbella</p><a href="tel:+34952907386">+34 952 907 386</a><a href="mailto:info@marbellaforsale.com">info@marbellaforsale.com</a></div>
+      </div>
+      <div className="footer-bottom shell"><span>© 2026 Marbella For Sale S.L.</span><div><Link href="/privacy">Privacy</Link><Link href="/privacy">Cookies</Link><Link href="/privacy">Legal</Link></div><span>ES · EN · FR · DE · NL</span></div>
+    </footer>
+  );
+}
+
+export function SearchPanel() {
+  return (
+    <form className="search-panel" action="/properties">
+      <label><span>Location</span><select name="area" defaultValue=""><option value="">All prime areas</option><option>Golden Mile</option><option>Nueva Andalucia</option><option>Benahavis</option><option>Puerto Banus</option><option>Sierra Blanca</option></select></label>
+      <label><span>Property type</span><select name="type" defaultValue=""><option value="">All properties</option><option>Villa</option><option>Penthouse</option><option>Apartment</option><option>Townhouse</option></select></label>
+      <label><span>Price from</span><select name="min" defaultValue=""><option value="">Any price</option><option value="1000000">€1M</option><option value="2500000">€2.5M</option><option value="5000000">€5M</option></select></label>
+      <label><span>Price to</span><select name="max" defaultValue=""><option value="">No limit</option><option value="2500000">€2.5M</option><option value="5000000">€5M</option><option value="10000000">€10M</option></select></label>
+      <button type="submit"><span>Search properties</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg></button>
+    </form>
+  );
+}
+
+export function PropertyCard({ property, priority = false }: { property: Property; priority?: boolean }) {
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    let stored = false;
+    try { stored = JSON.parse(localStorage.getItem("mfs-saved") || "[]").includes(property.slug); } catch { /* ignored */ }
+    const timer = window.setTimeout(() => setSaved(stored), 0);
+    return () => window.clearTimeout(timer);
+  }, [property.slug]);
+  function toggleSaved() {
+    const current: string[] = JSON.parse(localStorage.getItem("mfs-saved") || "[]");
+    const next = current.includes(property.slug) ? current.filter((item) => item !== property.slug) : [...current, property.slug];
+    localStorage.setItem("mfs-saved", JSON.stringify(next));
+    setSaved(next.includes(property.slug));
+  }
+  return (
+    <article className="property-card">
+      <Link href={`/properties/${property.slug}`} className="property-image">
+        <img src={property.image} alt={`${property.title}, ${property.location}`} loading={priority ? "eager" : "lazy"} />
+        {property.badge && <span className="property-badge">{property.badge}</span>}
+        <span className="view-property">View residence <ArrowIcon /></span>
+      </Link>
+      <button className={`save-button ${saved ? "is-saved" : ""}`} onClick={toggleSaved} aria-label={saved ? "Remove from saved properties" : "Save property"}><HeartIcon filled={saved} /></button>
+      <div className="property-info">
+        <div><p>{property.location}</p><h3><Link href={`/properties/${property.slug}`}>{property.title}</Link></h3></div>
+        <strong>{property.priceLabel}</strong>
+      </div>
+      <div className="property-specs"><span>{property.beds} beds</span><i /><span>{property.baths} baths</span><i /><span>{property.built.toLocaleString("en-GB")} m²</span><span className="property-ref">{property.ref}</span></div>
+    </article>
+  );
+}
+
+export function PropertyResults({ properties }: { properties: Property[] }) {
+  const [area, setArea] = useState("");
+  const [type, setType] = useState("");
+  const [sort, setSort] = useState("featured");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const result = useMemo(() => {
+    const filtered = properties.filter((p) => (!area || p.area === area) && (!type || p.type === type));
+    if (sort === "high") return [...filtered].sort((a, b) => b.price - a.price);
+    if (sort === "low") return [...filtered].sort((a, b) => a.price - b.price);
+    return filtered;
+  }, [area, type, sort, properties]);
+  return (
+    <>
+      <div className="catalog-toolbar">
+        <div className="catalog-filters">
+          <label>Area<select value={area} onChange={(e) => setArea(e.target.value)}><option value="">All areas</option>{[...new Set(properties.map((p) => p.area))].map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label>Type<select value={type} onChange={(e) => setType(e.target.value)}><option value="">All types</option>{[...new Set(properties.map((p) => p.type))].map((item) => <option key={item}>{item}</option>)}</select></label>
+          <button className="more-filter" type="button">Price, beds &amp; features <span>＋</span></button>
+        </div>
+        <div className="catalog-controls"><span>{result.length} residences</span><label>Sort<select value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="high">Price: high to low</option><option value="low">Price: low to high</option></select></label><button onClick={() => setView(view === "grid" ? "list" : "grid")} aria-label="Change layout">{view === "grid" ? "▦" : "☰"}</button></div>
+      </div>
+      <div className={`property-grid catalog-grid ${view === "list" ? "is-list" : ""}`}>{result.map((property) => <PropertyCard property={property} key={property.slug} />)}</div>
+      {result.length === 0 && <div className="empty-state"><h3>No exact matches — yet.</h3><p>Our advisors can search the entire market against your brief.</p><Link className="button button-dark" href="/contact">Start a private search <ArrowIcon /></Link></div>}
+    </>
+  );
+}
+
+export function EnquiryForm({ propertyTitle }: { propertyTitle?: string }) {
+  const [sent, setSent] = useState(false);
+  if (sent) return <div className="form-success"><span>✓</span><h3>Thank you.</h3><p>One of our Marbella advisors will contact you personally within one business day.</p></div>;
+  return (
+    <form className="enquiry-form" onSubmit={(e) => { e.preventDefault(); setSent(true); }}>
+      {propertyTitle && <input type="hidden" name="property" value={propertyTitle} />}
+      <div className="form-row"><label>First name<input required name="firstName" /></label><label>Last name<input required name="lastName" /></label></div>
+      <label>Email address<input required type="email" name="email" /></label>
+      <label>Phone number<input required type="tel" name="phone" placeholder="+34" /></label>
+      <label>How can we help?<textarea name="message" defaultValue={propertyTitle ? `I would like more information about ${propertyTitle}.` : "I would like to discuss my property requirements."} /></label>
+      <label className="consent"><input required type="checkbox" /> <span>I have read and accept the privacy policy.</span></label>
+      <button className="button button-dark" type="submit">Send private enquiry <ArrowIcon /></button>
+    </form>
+  );
+}
