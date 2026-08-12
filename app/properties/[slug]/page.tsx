@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowIcon, EnquiryForm, Footer, Header, PropertyCard } from "../../components";
 import { properties } from "../../data";
+import { PropertyGallery } from "../../property-gallery";
 
 export function generateStaticParams() { return properties.map(({ slug }) => ({ slug })); }
 
@@ -20,8 +21,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
   return <><Header /><main>
     <section className="detail-hero"><img src={property.image} alt={`${property.title} in ${property.location}`} /><div className="detail-title shell"><span className="location">{property.location} · {property.ref}</span><h1>{property.title}</h1><div className="detail-bottom"><span className="detail-price">{property.priceLabel}</span><div className="detail-specs"><span>{property.beds} bedrooms</span><span>{property.baths} bathrooms</span><span>{property.built.toLocaleString("en-GB")} m² built</span>{property.plot && <span>{property.plot.toLocaleString("en-GB")} m² plot</span>}</div></div></div></section>
     <section className="detail-overview section shell"><div><p className="eyebrow">The residence</p><h2>Space, light<br />and <em>complete privacy.</em></h2></div><div className="detail-description"><p>{property.description}</p><div className="feature-grid">{property.features.map((feature) => <span key={feature}>— &nbsp; {feature}</span>)}</div><Link className="text-link" href="#enquire" style={{ marginTop: 38 }}>Request full details <ArrowIcon /></Link></div></section>
-    <section className="gallery" aria-label="Property gallery">{property.gallery.slice(0, 3).map((image, index) => <figure key={image}><img src={image} alt={`${property.title} view ${index + 1}`} loading="lazy" /></figure>)}</section>
+    <PropertyGallery property={property} />
     <section className="property-enquiry section shell" id="enquire"><div className="enquiry-intro"><p className="eyebrow">Private viewing</p><h2>Experience it<br /><em>for yourself.</em></h2><p>Arrange a private viewing or request the complete brochure, floor plans and location details. Every enquiry is handled personally and with discretion.</p></div><EnquiryForm propertyTitle={property.title} propertyRef={property.ref} source="property" /></section>
     {related.length > 0 && <section className="section shell" style={{ paddingTop: 20 }}><div className="section-heading split-heading"><div><p className="eyebrow">You may also like</p><h2>Similar residences</h2></div><Link className="outline-link" href="/properties">View full collection <ArrowIcon /></Link></div><div className="property-grid">{related.map((item) => <PropertyCard property={item} key={item.slug} />)}</div></section>}
+    <Link className="mobile-enquiry-bar" href="#enquire">Arrange a private viewing <ArrowIcon /></Link>
   </main><Footer /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} /></>;
 }

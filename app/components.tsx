@@ -12,6 +12,35 @@ function HeartIcon({ filled = false }: { filled?: boolean }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path className={filled ? "filled" : ""} d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.7-7.5 1.1-1.1a5.5 5.5 0 0 0 0-7.8Z" /></svg>;
 }
 
+function CloseIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>;
+}
+
+function CompareIcon({ selected = false }: { selected?: boolean }) {
+  return <svg viewBox="0 0 24 24" aria-hidden="true">{selected ? <><path d="M4 7h7M4 17h16M15 7h5" /><path d="m14.5 10.5 2 2 4-4" /></> : <><path d="M4 7h16M4 17h16" /><path d="M9 4v6M15 14v6" /></>}</svg>;
+}
+
+function GridIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" /><rect x="14" y="4" width="6" height="6" /><rect x="4" y="14" width="6" height="6" /><rect x="14" y="14" width="6" height="6" /></svg>;
+}
+
+function ListIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" /><circle cx="5" cy="6" r="1" /><circle cx="5" cy="12" r="1" /><circle cx="5" cy="18" r="1" /></svg>;
+}
+
+function CheckIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7" /></svg>;
+}
+
+function readStoredList(key: string) {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 export function Header({ transparent = false, morphLogo = false }: { transparent?: boolean; morphLogo?: boolean }) {
   const [open, setOpen] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
@@ -25,6 +54,14 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
     window.addEventListener("mfs:saved", refresh);
     return () => { window.clearTimeout(timer); window.removeEventListener("mfs:saved", refresh); };
   }, []);
+  useEffect(() => {
+    if (!open) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeMenu = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", closeMenu);
+    return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", closeMenu); };
+  }, [open]);
   useEffect(() => {
     if (!morphLogo) return;
     const header = headerRef.current;
@@ -77,20 +114,21 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
   return (
     <header ref={headerRef} className={`site-header ${transparent ? "is-transparent" : ""} ${morphLogo ? "is-morphing" : ""} ${open ? "menu-is-open" : ""}`}>
       <div className="header-inner">
-        <button className="menu-button" type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Open navigation">
+        <button className="menu-button" type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={open ? "Close navigation" : "Open navigation"}>
           <span /><span />
         </button>
         <Link ref={logoRef} href="/" className={`wordmark ${morphLogo ? "morph-wordmark" : ""}`} aria-label="Marbella For Sale home">
           <strong>MARBELLA</strong><span>FOR SALE</span>
         </Link>
         <nav className={open ? "nav-open" : ""} aria-label="Primary navigation">
-          <button className="nav-close" onClick={() => setOpen(false)} aria-label="Close navigation">×</button>
+          <button className="nav-close" onClick={() => setOpen(false)} aria-label="Close navigation"><CloseIcon /></button>
           <Link href="/properties" onClick={() => setOpen(false)}>Properties</Link>
           <Link href="/developments" onClick={() => setOpen(false)}>New developments</Link>
           <Link href="/areas" onClick={() => setOpen(false)}>Areas</Link>
           <Link href="/sell" onClick={() => setOpen(false)}>Sell with us</Link>
           <Link href="/guides" onClick={() => setOpen(false)}>Insights</Link>
           <Link href="/about" onClick={() => setOpen(false)}>About</Link>
+          <Link className="nav-mobile-contact" href="/contact" onClick={() => setOpen(false)}>Speak to an advisor <ArrowIcon /></Link>
         </nav>
         <div className="header-actions">
           <button className="language" type="button" aria-label="Change language">EN <span>⌄</span></button>
@@ -162,13 +200,12 @@ export function SearchPanel() {
 export function PropertyCard({ property, priority = false, showCompare = false, compared = false, onCompare }: { property: Property; priority?: boolean; showCompare?: boolean; compared?: boolean; onCompare?: (property: Property) => void }) {
   const [saved, setSaved] = useState(false);
   useEffect(() => {
-    let stored = false;
-    try { stored = JSON.parse(localStorage.getItem("mfs-saved") || "[]").includes(property.slug); } catch { /* ignored */ }
+    const stored = readStoredList("mfs-saved").includes(property.slug);
     const timer = window.setTimeout(() => setSaved(stored), 0);
     return () => window.clearTimeout(timer);
   }, [property.slug]);
   function toggleSaved() {
-    const current: string[] = JSON.parse(localStorage.getItem("mfs-saved") || "[]");
+    const current = readStoredList("mfs-saved");
     const next = current.includes(property.slug) ? current.filter((item) => item !== property.slug) : [...current, property.slug];
     localStorage.setItem("mfs-saved", JSON.stringify(next));
     setSaved(next.includes(property.slug));
@@ -181,8 +218,8 @@ export function PropertyCard({ property, priority = false, showCompare = false, 
         {property.badge && <span className="property-badge">{property.badge}</span>}
         <span className="view-property">View residence <ArrowIcon /></span>
       </Link>
-      <button className={`save-button ${saved ? "is-saved" : ""}`} onClick={toggleSaved} aria-label={saved ? "Remove from saved properties" : "Save property"}><HeartIcon filled={saved} /></button>
-      {showCompare && <button className={`compare-button ${compared ? "is-compared" : ""}`} type="button" onClick={() => onCompare?.(property)}><span>{compared ? "✓" : "+"}</span>{compared ? "Added" : "Compare"}</button>}
+      <button className={`save-button ${saved ? "is-saved" : ""}`} type="button" onClick={toggleSaved} aria-pressed={saved} aria-label={saved ? "Remove from saved properties" : "Save property"}><HeartIcon filled={saved} /></button>
+      {showCompare && <button className={`compare-button ${compared ? "is-compared" : ""}`} type="button" onClick={() => onCompare?.(property)} aria-pressed={compared}><CompareIcon selected={compared} />{compared ? "Selected" : "Compare"}</button>}
       <div className="property-info">
         <div><p>{property.location}</p><h3><Link href={`/properties/${property.slug}`}>{property.title}</Link></h3></div>
         <strong>{property.priceLabel}</strong>
@@ -207,14 +244,33 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
   const [view, setView] = useState<"grid" | "list">("grid");
   const [compared, setCompared] = useState<Property[]>([]);
   const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [compareMessage, setCompareMessage] = useState("");
+  const compareReady = useRef(false);
   useEffect(() => {
     const refresh = () => {
-      try { setSavedSlugs(JSON.parse(localStorage.getItem("mfs-saved") || "[]")); } catch { setSavedSlugs([]); }
+      setSavedSlugs(readStoredList("mfs-saved"));
     };
     const timer = window.setTimeout(refresh, 0);
     window.addEventListener("mfs:saved", refresh);
     return () => { window.clearTimeout(timer); window.removeEventListener("mfs:saved", refresh); };
   }, []);
+  useEffect(() => {
+    const selected = readStoredList("mfs-compare").map((slug) => properties.find((property) => property.slug === slug)).filter((property): property is Property => Boolean(property)).slice(0, 3);
+    const timer = window.setTimeout(() => { setCompared(selected); compareReady.current = true; }, 0);
+    return () => window.clearTimeout(timer);
+  }, [properties]);
+  useEffect(() => {
+    if (!compareReady.current) return;
+    localStorage.setItem("mfs-compare", JSON.stringify(compared.map((property) => property.slug)));
+  }, [compared]);
+  useEffect(() => {
+    if (!comparisonOpen) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeComparison = (event: KeyboardEvent) => { if (event.key === "Escape") setComparisonOpen(false); };
+    window.addEventListener("keydown", closeComparison);
+    return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", closeComparison); };
+  }, [comparisonOpen]);
   useEffect(() => {
     const params = new URLSearchParams();
     if (area) params.set("area", area);
@@ -240,7 +296,18 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
   }, [area, type, min, max, beds, savedOnly, savedSlugs, sort, properties]);
   function resetFilters() { setArea(""); setType(""); setMin(""); setMax(""); setBeds(""); setSavedOnly(false); }
   function toggleCompare(property: Property) {
-    setCompared((current) => current.some((item) => item.slug === property.slug) ? current.filter((item) => item.slug !== property.slug) : current.length < 3 ? [...current, property] : current);
+    setCompared((current) => {
+      if (current.some((item) => item.slug === property.slug)) {
+        setCompareMessage("");
+        return current.filter((item) => item.slug !== property.slug);
+      }
+      if (current.length >= 3) {
+        setCompareMessage("You can compare up to three residences. Remove one to add another.");
+        return current;
+      }
+      setCompareMessage("");
+      return [...current, property];
+    });
   }
   return (
     <>
@@ -250,7 +317,14 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
           <label>Type<select value={type} onChange={(e) => setType(e.target.value)}><option value="">All types</option>{[...new Set(properties.map((p) => p.type))].map((item) => <option key={item}>{item}</option>)}</select></label>
           <button className={`more-filter ${showMore ? "is-open" : ""}`} type="button" onClick={() => setShowMore(!showMore)} aria-expanded={showMore}>Price &amp; bedrooms <span>{showMore ? "−" : "+"}</span></button>
         </div>
-        <div className="catalog-controls"><span>{result.length} {result.length === 1 ? "residence" : "residences"}</span><label>Sort<select value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="high">Price: high to low</option><option value="low">Price: low to high</option></select></label><button onClick={() => setView(view === "grid" ? "list" : "grid")} aria-label="Change layout">{view === "grid" ? "▦" : "☰"}</button></div>
+        <div className="catalog-controls">
+          <span>{result.length} {result.length === 1 ? "residence" : "residences"}</span>
+          <label>Sort<select value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="high">Price: high to low</option><option value="low">Price: low to high</option></select></label>
+          <div className="view-switch" role="group" aria-label="Property layout">
+            <button className={view === "grid" ? "is-active" : ""} type="button" onClick={() => setView("grid")} aria-pressed={view === "grid"} aria-label="Grid view"><GridIcon /></button>
+            <button className={view === "list" ? "is-active" : ""} type="button" onClick={() => setView("list")} aria-pressed={view === "list"} aria-label="List view"><ListIcon /></button>
+          </div>
+        </div>
       </div>
       {showMore && <div className="advanced-filters">
         <label>Minimum price<select value={min} onChange={(e) => setMin(e.target.value)}><option value="">No minimum</option><option value="1000000">€1,000,000</option><option value="2500000">€2,500,000</option><option value="5000000">€5,000,000</option><option value="7500000">€7,500,000</option></select></label>
@@ -261,8 +335,42 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
       </div>}
       <div className={`property-grid catalog-grid ${view === "list" ? "is-list" : ""}`}>{result.map((property) => <PropertyCard property={property} showCompare compared={compared.some((item) => item.slug === property.slug)} onCompare={toggleCompare} key={property.slug} />)}</div>
       {result.length === 0 && <div className="empty-state"><h3>{savedOnly ? "Your shortlist is waiting." : "No exact matches — yet."}</h3><p>{savedOnly ? "Save the properties you love and they will appear here." : "Our advisors can search the entire market against your brief."}</p>{savedOnly ? <button className="button button-dark" onClick={resetFilters}>Explore all properties <ArrowIcon /></button> : <Link className="button button-dark" href="/contact">Start a private search <ArrowIcon /></Link>}</div>}
-      {compared.length > 0 && <div className="comparison-tray" role="region" aria-label="Property comparison"><div><span>Compare residences</span><strong>{compared.map((item) => item.title).join(" · ")}</strong></div><div className="comparison-actions"><button type="button" onClick={() => setCompared([])}>Clear</button><button type="button" className="button button-light" disabled={compared.length < 2} onClick={() => setComparisonOpen(true)}>Compare {compared.length} homes <ArrowIcon /></button></div></div>}
-      {comparisonOpen && <div className="comparison-modal" role="dialog" aria-modal="true" aria-labelledby="comparison-title"><button className="modal-backdrop" onClick={() => setComparisonOpen(false)} aria-label="Close comparison" /><div className="comparison-panel"><div className="comparison-header"><div><p className="eyebrow">Side by side</p><h2 id="comparison-title">Compare residences</h2></div><button type="button" onClick={() => setComparisonOpen(false)} aria-label="Close comparison">×</button></div><div className={`comparison-table comparison-${compared.length}`}><div className="comparison-labels"><i aria-hidden="true" /><span>Residence</span><span>Price</span><span>Location</span><span>Bedrooms</span><span>Bathrooms</span><span>Built area</span><span>Plot / terrace</span></div>{compared.map((property) => <div className="comparison-column" key={property.slug}><img src={property.image} alt="" /><strong>{property.title}</strong><span>{property.priceLabel}</span><span>{property.location}</span><span>{property.beds}</span><span>{property.baths}</span><span>{property.built.toLocaleString("en-GB")} m²</span><span>{property.plot ? `${property.plot.toLocaleString("en-GB")} m² plot` : `${property.terrace?.toLocaleString("en-GB")} m² terrace`}</span><Link href={`/properties/${property.slug}`}>View property <ArrowIcon /></Link></div>)}</div></div></div>}
+      {compared.length > 0 && (
+        <div className="comparison-tray" role="region" aria-label="Property comparison">
+          <div className="comparison-selection">
+            <div className="comparison-tray-label"><span>Compare residences</span><strong>{compared.length} of 3 selected</strong></div>
+            <div className="comparison-chips">
+              {compared.map((property) => (
+                <div className="comparison-chip" key={property.slug}>
+                  <img src={property.image} alt="" />
+                  <span>{property.title}</span>
+                  <button type="button" onClick={() => toggleCompare(property)} aria-label={`Remove ${property.title} from comparison`}><CloseIcon /></button>
+                </div>
+              ))}
+            </div>
+            {compareMessage && <p className="comparison-message" role="status">{compareMessage}</p>}
+          </div>
+          <div className="comparison-actions"><button type="button" onClick={() => { setCompared([]); setCompareMessage(""); }}>Clear</button><button type="button" className="button button-light" disabled={compared.length < 2} onClick={() => setComparisonOpen(true)}>Compare {compared.length} homes <ArrowIcon /></button></div>
+        </div>
+      )}
+      {comparisonOpen && (
+        <div className="comparison-modal" role="dialog" aria-modal="true" aria-labelledby="comparison-title">
+          <button className="modal-backdrop" onClick={() => setComparisonOpen(false)} aria-label="Close comparison" />
+          <div className="comparison-panel">
+            <div className="comparison-header"><div><p className="eyebrow">Side by side</p><h2 id="comparison-title">Compare residences</h2><p>Review the details that matter, then open any residence for its complete gallery and private enquiry.</p></div><button type="button" onClick={() => setComparisonOpen(false)} aria-label="Close comparison"><CloseIcon /></button></div>
+            <div className={`comparison-table comparison-${compared.length}`}>
+              <div className="comparison-labels"><i aria-hidden="true" /><span>Residence</span><span>Price</span><span>Location</span><span>Bedrooms</span><span>Bathrooms</span><span>Built area</span><span>Plot / terrace</span></div>
+              {compared.map((property) => (
+                <article className="comparison-column" key={property.slug}>
+                  <div className="comparison-image"><img src={property.image} alt={`${property.title}, ${property.location}`} /><button type="button" onClick={() => toggleCompare(property)} aria-label={`Remove ${property.title} from comparison`}><CloseIcon /></button></div>
+                  <strong data-label="Residence">{property.title}</strong><span data-label="Price">{property.priceLabel}</span><span data-label="Location">{property.location}</span><span data-label="Bedrooms">{property.beds}</span><span data-label="Bathrooms">{property.baths}</span><span data-label="Built area">{property.built.toLocaleString("en-GB")} m²</span><span data-label="Plot / terrace">{property.plot ? `${property.plot.toLocaleString("en-GB")} m² plot` : `${property.terrace?.toLocaleString("en-GB")} m² terrace`}</span>
+                  <Link href={`/properties/${property.slug}`}>View property <ArrowIcon /></Link>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -304,7 +412,7 @@ export function EnquiryForm({ propertyTitle, propertyRef, source = "contact" }: 
     }
   }
 
-  if (reference) return <div className="form-success" aria-live="polite"><span>✓</span><h3>Thank you.</h3><p>Your private enquiry has been received. One of our Marbella advisors will contact you personally within one business day.</p><small>Reference {reference}</small></div>;
+  if (reference) return <div className="form-success" aria-live="polite"><span><CheckIcon /></span><h3>Thank you.</h3><p>Your private enquiry has been received. One of our Marbella advisors will contact you personally within one business day.</p><small>Reference {reference}</small></div>;
   return (
     <form className="enquiry-form" onSubmit={submitEnquiry}>
       {propertyTitle && <input type="hidden" name="property" value={propertyTitle} />}
