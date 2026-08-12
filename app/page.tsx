@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Header, Footer, PropertyCard, ArrowIcon, SearchPanel, LuxuryMotion } from "./components";
-import { areas, properties } from "./data";
+import { areas, imageSet, properties } from "./data";
 
 export default function Home() {
   const schema = {
@@ -21,7 +21,7 @@ export default function Home() {
         </section>
 
         <section className="intro-story section shell">
-          <div className="intro-portrait"><img src={properties[5].image} alt="Private hillside residence in Marbella" /><span>El Madroñal · Benahavís</span></div>
+          <div className="intro-portrait"><img src={properties[1].gallery[2]} alt="Interior of a real villa in Nueva Andalucía" /><span>Nueva Andalucía · Marbella</span></div>
           <div className="intro-editorial"><div className="section-index"><span>01</span><i /></div><div className="intro-title"><p className="eyebrow">A considered collection</p><h2>Not simply a property.<br /><em>A place that belongs to you.</em></h2></div><div className="intro-action"><span>Independent advice<br />Local perspective</span><Link className="text-link" href="/about">Our approach <ArrowIcon /></Link></div></div>
         </section>
 
@@ -39,7 +39,7 @@ export default function Home() {
           <div className="area-mosaic">{areas.slice(0, 4).map((area, index) => <Link href={`/areas/${area.slug}`} className={`area-tile-home area-tile-${index + 1}`} key={area.slug}><img src={area.image} alt={`${area.name}, Marbella`} /><span className="area-tile-shade" /><span className="area-number">0{index + 1}</span><span className="area-tile-copy"><small>{area.tagline}</small><strong>{area.name}</strong></span><span className="circle-arrow"><ArrowIcon /></span></Link>)}</div>
         </section>
 
-        <section className="market-section"><div className="market-image"><img src={properties[2].gallery[3]} alt="Mediterranean coastline in Marbella" /><span>Marbella · Mediterranean coast</span></div><div className="market-panel"><p className="eyebrow light">Market intelligence · 2026</p><h2>Informed decisions.<br /><em>Made with confidence.</em></h2><div className="market-stats"><div><strong>20+</strong><span>Years of local market knowledge</span></div><div><strong>10</strong><span>Prime Costa del Sol areas covered</span></div><div><strong>360°</strong><span>Support from search to completion</span></div></div><Link className="text-link" href="/guides">Explore our buyer&apos;s guides <ArrowIcon /></Link></div></section>
+        <section className="market-section"><div className="market-image"><img src={imageSet.coast} alt="Mediterranean coastline in Marbella" /><span>Marbella · Mediterranean coast</span></div><div className="market-panel"><p className="eyebrow light">Market intelligence · 2026</p><h2>Informed decisions.<br /><em>Made with confidence.</em></h2><div className="market-stats"><div><strong>20+</strong><span>Years of local market knowledge</span></div><div><strong>10</strong><span>Prime Costa del Sol areas covered</span></div><div><strong>360°</strong><span>Support from search to completion</span></div></div><Link className="text-link" href="/guides">Explore our buyer&apos;s guides <ArrowIcon /></Link></div></section>
 
         <section className="seller-story"><div className="seller-visual"><span>For property owners · Marbella</span></div><div className="seller-copy"><p className="eyebrow">Sell with Marbella For Sale</p><h2>Your home deserves<br /><em>the right audience.</em></h2><div className="seller-services"><span>Premium presentation</span><span>Qualified international reach</span><span>Personal sales strategy</span></div><Link className="button button-dark" href="/sell">Request a private valuation <ArrowIcon /></Link></div></section>
       </main>
