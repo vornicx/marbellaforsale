@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Header, Footer, PropertyCard, ArrowIcon, SearchPanel } from "./components";
+import { Header, Footer, PropertyCard, ArrowIcon, SearchPanel, LuxuryMotion } from "./components";
 import { areas, properties } from "./data";
 
 export default function Home() {
@@ -13,6 +13,7 @@ export default function Home() {
     <>
       <Header transparent morphLogo />
       <main>
+        <LuxuryMotion />
         <section className="hero">
           <div className="hero-media" aria-hidden="true" /><div className="hero-shade" />
           <div className="hero-content shell"><p className="eyebrow light">Marbella · Costa del Sol</p><h1>Where exceptional living begins.</h1></div>

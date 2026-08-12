@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Property } from "./data";
 
 export function ArrowIcon() {
@@ -16,7 +15,8 @@ function HeartIcon({ filled = false }: { filled?: boolean }) {
 export function Header({ transparent = false, morphLogo = false }: { transparent?: boolean; morphLogo?: boolean }) {
   const [open, setOpen] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
-  const [morph, setMorph] = useState({ top: "30vh", scale: 4.2, settled: false });
+  const headerRef = useRef<HTMLElement>(null);
+  const logoRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     const refresh = () => {
       try { setSavedCount(JSON.parse(localStorage.getItem("mfs-saved") || "[]").length); } catch { setSavedCount(0); }
@@ -27,24 +27,51 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
   }, []);
   useEffect(() => {
     if (!morphLogo) return;
+    const header = headerRef.current;
+    const logo = logoRef.current;
+    const media = document.querySelector<HTMLElement>(".hero-media");
+    const content = document.querySelector<HTMLElement>(".hero-content");
+    const search = document.querySelector<HTMLElement>(".hero-search");
+    const cue = document.querySelector<HTMLElement>(".scroll-cue");
+    if (!header || !logo) return;
     let frame = 0;
-    const update = () => {
-      frame = 0;
+    let targetScroll = window.scrollY;
+    let renderedScroll = targetScroll;
+    const clamp = (value: number) => Math.min(Math.max(value, 0), 1);
+    const easeInOutCubic = (value: number) => value < .5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
+    const render = () => {
+      renderedScroll += (targetScroll - renderedScroll) * .14;
+      if (Math.abs(targetScroll - renderedScroll) < .08) renderedScroll = targetScroll;
       const mobile = window.innerWidth <= 800;
       const startTop = window.innerHeight * (mobile ? .27 : .29);
       const endTop = mobile ? 20 : 29;
-      const distance = mobile ? 210 : 320;
-      const linear = Math.min(Math.max(window.scrollY / distance, 0), 1);
-      const progress = 1 - Math.pow(1 - linear, 3);
+      const distance = mobile ? 300 : 430;
+      const linear = clamp(renderedScroll / distance);
+      const progress = easeInOutCubic(linear);
       const startScale = mobile ? 2.65 : 4.2;
-      setMorph({
-        top: `${startTop + (endTop - startTop) * progress}px`,
-        scale: startScale + (1 - startScale) * progress,
-        settled: linear > .72,
-      });
+      logo.style.top = `${startTop + (endTop - startTop) * progress}px`;
+      logo.style.transform = `translate3d(-50%, 0, 0) scale(${startScale + (1 - startScale) * progress})`;
+      header.classList.toggle("is-scrolled", linear > .82);
+      header.style.setProperty("--motion-progress", linear.toFixed(4));
+      const heroProgress = clamp(renderedScroll / Math.max(window.innerHeight * .72, 1));
+      if (media) media.style.transform = `translate3d(0, ${heroProgress * 28}px, 0) scale(${1 + heroProgress * .045})`;
+      if (content) {
+        content.style.opacity = `${clamp(1 - linear * 1.38)}`;
+        content.style.transform = `translate3d(0, ${linear * -18}px, 0)`;
+      }
+      if (search) {
+        search.style.opacity = `${clamp(1 - Math.max(0, linear - .48) * .78)}`;
+        search.style.transform = `translate3d(-50%, ${linear * 12}px, 0)`;
+      }
+      if (cue) cue.style.opacity = `${clamp(1 - linear * 1.45)}`;
+      if (Math.abs(targetScroll - renderedScroll) >= .08) frame = window.requestAnimationFrame(render);
+      else frame = 0;
     };
-    const requestUpdate = () => { if (!frame) frame = window.requestAnimationFrame(update); };
-    update();
+    const requestUpdate = () => {
+      targetScroll = window.scrollY;
+      if (!frame) frame = window.requestAnimationFrame(render);
+    };
+    render();
     window.addEventListener("scroll", requestUpdate, { passive: true });
     window.addEventListener("resize", requestUpdate);
     return () => {
@@ -54,12 +81,12 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
     };
   }, [morphLogo]);
   return (
-    <header className={`site-header ${transparent ? "is-transparent" : ""} ${morphLogo ? "is-morphing" : ""} ${morph.settled ? "is-scrolled" : ""} ${open ? "menu-is-open" : ""}`}>
+    <header ref={headerRef} className={`site-header ${transparent ? "is-transparent" : ""} ${morphLogo ? "is-morphing" : ""} ${open ? "menu-is-open" : ""}`}>
       <div className="header-inner">
         <button className="menu-button" type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-label="Open navigation">
           <span /><span />
         </button>
-        <Link href="/" className={`wordmark ${morphLogo ? "morph-wordmark" : ""}`} aria-label="Marbella For Sale home" style={morphLogo ? { top: morph.top, transform: `translateX(-50%) scale(${morph.scale})` } as CSSProperties : undefined}>
+        <Link ref={logoRef} href="/" className={`wordmark ${morphLogo ? "morph-wordmark" : ""}`} aria-label="Marbella For Sale home">
           <strong>MARBELLA</strong><span>FOR SALE</span>
         </Link>
         <nav className={open ? "nav-open" : ""} aria-label="Primary navigation">
@@ -79,6 +106,34 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
       </div>
     </header>
   );
+}
+
+export function LuxuryMotion() {
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const root = document.documentElement;
+    const sections = Array.from(document.querySelectorAll<HTMLElement>("main > section:not(.hero)"));
+    root.classList.add("motion-enabled");
+    sections.forEach((section) => {
+      section.classList.add("reveal-target");
+      section.querySelectorAll<HTMLElement>(".property-card, .area-row, .market-stats > div, .signature-points > span, .seller-services > span").forEach((item, index) => {
+        item.style.setProperty("--reveal-delay", `${Math.min(index * 85, 340)}ms`);
+      });
+    });
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-revealed");
+        observer.unobserve(entry.target);
+      });
+    }, { threshold: .1, rootMargin: "0px 0px -7% 0px" });
+    sections.forEach((section) => observer.observe(section));
+    return () => {
+      observer.disconnect();
+      root.classList.remove("motion-enabled");
+    };
+  }, []);
+  return null;
 }
 
 export function Footer() {
