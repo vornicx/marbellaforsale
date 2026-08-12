@@ -39,7 +39,7 @@ function sourceLabel(source: string) {
   return ({ property: "Property enquiry", valuation: "Seller valuation", contact: "General enquiry", "private-search": "Private search" } as Record<string, string>)[source] || source;
 }
 
-export function StudioDashboard({ initialLeads, propertyCount, userName }: { initialLeads: StudioLead[]; propertyCount: number; userName: string }) {
+export function StudioDashboard({ initialLeads, propertyCount, userName, previewMode = false }: { initialLeads: StudioLead[]; propertyCount: number; userName: string; previewMode?: boolean }) {
   const [leads, setLeads] = useState(initialLeads);
   const [section, setSection] = useState<"overview" | "enquiries">("overview");
   const [filter, setFilter] = useState("open");
@@ -51,6 +51,10 @@ export function StudioDashboard({ initialLeads, propertyCount, userName }: { ini
   const priorityLeads = (highPriority.length ? highPriority : openLeads).slice(0, 5);
 
   async function updateStatus(id: string, status: string) {
+    if (previewMode) {
+      setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, status, updatedAt: new Date().toISOString() } : lead));
+      return;
+    }
     const previous = leads;
     setError("");
     setUpdating(id);
@@ -79,7 +83,8 @@ export function StudioDashboard({ initialLeads, propertyCount, userName }: { ini
       <Link href="/">← Return to website</Link>
     </aside>
     <section className="studio-main">
-      <header className="studio-header"><div><p className="studio-kicker">Marbella For Sale · Owner Studio</p><h1>{section === "overview" ? `Good day, ${userName}.` : "Enquiry pipeline"}</h1><p>{section === "overview" ? "A live view of buyer and seller demand across your portfolio." : "Every website enquiry, its context and its current commercial status."}</p></div><Link href="/signout-with-chatgpt?return_to=/" className="studio-account" aria-label="Sign out">MF</Link></header>
+      <header className="studio-header"><div><p className="studio-kicker">Marbella For Sale · Owner Studio</p><h1>{section === "overview" ? `Good day, ${userName}.` : "Enquiry pipeline"}</h1><p>{section === "overview" ? "A live view of buyer and seller demand across your portfolio." : "Every website enquiry, its context and its current commercial status."}</p></div>{previewMode ? <span className="studio-preview-label">Demonstration workspace</span> : <Link href="/signout-with-chatgpt?return_to=/" className="studio-account" aria-label="Sign out">MF</Link>}</header>
+      {previewMode && <div className="studio-preview-note"><span>Secure preview</span><p>Sample enquiries are shown to demonstrate the owner experience. No client information is exposed in this public view.</p></div>}
       {error && <p className="studio-alert" role="alert">{error}</p>}
 
       {section === "overview" ? <>
