@@ -21,7 +21,7 @@ export default function Home() {
         </section>
 
         <section className="intro-story section shell">
-          <div className="intro-portrait"><img src={properties[1].gallery[2]} alt="Interior of a real villa in Nueva Andalucía" /><span>Nueva Andalucía · Marbella</span></div>
+          <div className="intro-portrait"><img src="/images/editorial/not-simply-property.jpg" alt="Contemporary luxury residence overlooking the Mediterranean" /><span>Marbella · Costa del Sol</span></div>
           <div className="intro-editorial"><div className="section-index"><span>01</span><i /></div><div className="intro-title"><p className="eyebrow">A considered collection</p><h2>Not simply a property.<br /><em>A place that belongs to you.</em></h2></div><div className="intro-action"><span>Independent advice<br />Local perspective</span><Link className="text-link" href="/about">Our approach <ArrowIcon /></Link></div></div>
         </section>
 
