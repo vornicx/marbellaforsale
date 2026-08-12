@@ -19,16 +19,16 @@ export type Property = {
   features: string[];
 };
 
-const feedGallery = (contact: string, propertyId: string, version: string) =>
-  [1, 2, 3, 4].map((photo) => `https://cdn.resales-online.com/public/${contact}/properties/${propertyId}/w1200/${photo}-7980e48d732b6fc85c14b43b94d2aa54.jpg?v=${version}`);
+const localGallery = (reference: string) =>
+  ["01", "02", "03", "04"].map((photo) => `/images/properties/${reference}/${photo}.jpg`);
 
-const madronalGallery = feedGallery("vj79r8sgv9", "2faf40ed202f11f0ad0102e0405b089b", "1746711196");
-const nuevaGallery = feedGallery("c6rxxw1glq", "29c552056c6511f182490652962539d5", "1781938917");
-const clubHillsGallery = feedGallery("ff7xgv5e2d47ogea", "3be0c0c315f411f08cfb02e0405b089b", "1780999580");
-const goldenMileGallery = feedGallery("4u8i2in212", "973467647e9211eca97d0217bc231ef4", "1781800541");
-const benahavisGallery = feedGallery("uqa4n98gm2", "ea5851fb94a911f182490652962539d5", "1786366517");
-const banusPenthouseGallery = feedGallery("ppg8p6eobndgyqok", "3cf021cd5a9111f182490652962539d5", "1779981486");
-const banusVillaGallery = feedGallery("xg4f70q0gc", "3c8c1cad5a6f11f182490652962539d5", "1779964123");
+const madronalGallery = localGallery("r5019220");
+const nuevaGallery = localGallery("r5421445");
+const clubHillsGallery = localGallery("r5011201");
+const goldenMileGallery = localGallery("mfsv1633");
+const benahavisGallery = localGallery("r5457370");
+const banusPenthouseGallery = localGallery("r5395939");
+const banusVillaGallery = localGallery("r5395735");
 
 export const imageSet = {
   dusk: "https://media.inmobalia.com/imgV1/B98Le8~d7M9k3DegpEFZhS0lI_F8U4XZVz~HWxt~mGgYekxX9nCAxh0ZjtE2u9zqepXEUrVLqfm8KeIGW6Gtyd4X9WnLVEutqvhaTbOS8g_lI~ejCtsvpBcN5kiTFO6sOzl27jxNwMwDDWCj7p_YIKcsfLkp~KA~Rg--.jpg",
