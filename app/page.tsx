@@ -11,11 +11,11 @@ export default function Home() {
   };
   return (
     <>
-      <Header transparent />
+      <Header transparent morphLogo />
       <main>
         <section className="hero">
           <div className="hero-media" aria-hidden="true" /><div className="hero-shade" />
-          <div className="hero-content shell"><p className="eyebrow light">Marbella · Costa del Sol</p><h1>Where exceptional<br />living begins.</h1></div>
+          <div className="hero-content shell"><p className="eyebrow light">Marbella · Costa del Sol</p><h1>Where exceptional living begins.</h1></div>
           <div className="hero-search shell"><SearchPanel /></div><div className="scroll-cue"><span>Discover</span><i /></div>
         </section>
 
