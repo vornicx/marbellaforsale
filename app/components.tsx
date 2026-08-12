@@ -31,7 +31,6 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
     const logo = logoRef.current;
     const media = document.querySelector<HTMLElement>(".hero-media");
     const content = document.querySelector<HTMLElement>(".hero-content");
-    const search = document.querySelector<HTMLElement>(".hero-search");
     const cue = document.querySelector<HTMLElement>(".scroll-cue");
     if (!header || !logo) return;
     let frame = 0;
@@ -51,17 +50,13 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
       const startScale = mobile ? 2.65 : 4.2;
       logo.style.top = `${startTop + (endTop - startTop) * progress}px`;
       logo.style.transform = `translate3d(-50%, 0, 0) scale(${startScale + (1 - startScale) * progress})`;
-      header.classList.toggle("is-scrolled", linear > .82);
+      header.classList.toggle("is-scrolled", linear > .96);
       header.style.setProperty("--motion-progress", linear.toFixed(4));
       const heroProgress = clamp(renderedScroll / Math.max(window.innerHeight * .72, 1));
       if (media) media.style.transform = `translate3d(0, ${heroProgress * 28}px, 0) scale(${1 + heroProgress * .045})`;
       if (content) {
         content.style.opacity = `${clamp(1 - linear * 1.38)}`;
         content.style.transform = `translate3d(0, ${linear * -18}px, 0)`;
-      }
-      if (search) {
-        search.style.opacity = `${clamp(1 - Math.max(0, linear - .48) * .78)}`;
-        search.style.transform = `translate3d(-50%, ${linear * 12}px, 0)`;
       }
       if (cue) cue.style.opacity = `${clamp(1 - linear * 1.45)}`;
       if (Math.abs(targetScroll - renderedScroll) >= .08) frame = window.requestAnimationFrame(render);
