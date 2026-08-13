@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ManagedProperty } from "../property-store";
+import { fetchWithTimeout } from "../fetch-client";
 
 export type StudioLead = {
   id: string;
@@ -67,6 +68,34 @@ function propertyScore(property: ManagedProperty) {
   return Math.round(checks.filter(Boolean).length / checks.length * 100);
 }
 
+async function optimizePropertyImage(file: File) {
+  if (!file.type.startsWith("image/") || typeof createImageBitmap !== "function") return file;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return file;
+  }
+  try {
+    const longestSide = Math.max(bitmap.width, bitmap.height);
+    const scale = Math.min(1, 2560 / longestSide);
+    if (scale === 1 && file.type === "image/webp" && file.size < 2_500_000) return file;
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) return file;
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", .88));
+    if (!blob) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp", lastModified: file.lastModified });
+  } finally {
+    bitmap.close();
+  }
+}
+
 function formatDate(value: string | null, includeTime = true) {
   if (!value) return "Not scheduled";
   return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", day: "2-digit", month: "short", year: "numeric", ...(includeTime ? { hour: "2-digit", minute: "2-digit" } : {}) }).format(new Date(value));
@@ -111,11 +140,11 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
       return statusMatch && sourceMatch && priorityMatch && queryMatch;
     }).sort((a, b) => sort === "oldest" ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [leads, priorityFilter, query, sort, sourceFilter, statusFilter]);
-  const priorityLeads = (openLeads.filter((lead) => lead.priority === "high").length ? openLeads.filter((lead) => lead.priority === "high") : openLeads).slice(0, 5);
-  const dueActions = openLeads.filter((lead) => lead.nextActionAt && new Date(lead.nextActionAt).getTime() <= new Date(initialNow).getTime() + 24 * 60 * 60_000);
-  const unscheduledQualified = openLeads.filter((lead) => ["qualified", "viewing"].includes(lead.status) && !lead.viewingAt);
-  const propertyDemand = managedProperties.map((property) => ({ property, leads: leads.filter((lead) => lead.propertyRef === property.ref).length })).sort((a, b) => b.leads - a.leads);
-  const contentScores = managedProperties.map((property) => ({ property, score: propertyScore(property) }));
+  const priorityLeads = useMemo(() => { const high = openLeads.filter((lead) => lead.priority === "high"); return (high.length ? high : openLeads).slice(0, 5); }, [openLeads]);
+  const dueActions = useMemo(() => openLeads.filter((lead) => lead.nextActionAt && new Date(lead.nextActionAt).getTime() <= new Date(initialNow).getTime() + 24 * 60 * 60_000), [initialNow, openLeads]);
+  const unscheduledQualified = useMemo(() => openLeads.filter((lead) => ["qualified", "viewing"].includes(lead.status) && !lead.viewingAt), [openLeads]);
+  const propertyDemand = useMemo(() => managedProperties.map((property) => ({ property, leads: leads.filter((lead) => lead.propertyRef === property.ref).length })).sort((a, b) => b.leads - a.leads), [leads, managedProperties]);
+  const contentScores = useMemo(() => managedProperties.map((property) => ({ property, score: propertyScore(property) })), [managedProperties]);
   const averageContentScore = contentScores.length ? Math.round(contentScores.reduce((sum, item) => sum + item.score, 0) / contentScores.length) : 0;
 
   useEffect(() => {
@@ -140,7 +169,7 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
     setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, ...changes, updatedAt: new Date().toISOString() } : lead));
     if (previewMode) { setUpdating(null); setNotice("Enquiry updated in demonstration mode"); return true; }
     try {
-      const response = await fetch(`/api/enquiries/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(changes) });
+      const response = await fetchWithTimeout(`/api/enquiries/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(changes) });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "The enquiry could not be updated.");
       setNotice("Enquiry updated");
@@ -164,7 +193,7 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
     setManagedProperties((current) => current.map((item) => item.id === property.id ? next : item));
     if (previewMode) { setUpdating(null); setNotice("Property updated in demonstration mode"); return true; }
     try {
-      const response = await fetch(`/api/studio/properties/${encodeURIComponent(property.id)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
+      const response = await fetchWithTimeout(`/api/studio/properties/${encodeURIComponent(property.id)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "The property could not be saved.");
       setNotice(property.status === "published" ? "Property published" : "Property saved");
@@ -180,7 +209,7 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
 
   function createProperty() {
     const id = `new-property-${Date.now()}`;
-    const property: ManagedProperty = { id, slug: id, title: "New private residence", location: "Marbella, Málaga", area: "Marbella", type: "Villa", price: 0, priceLabel: "€0", beds: 0, baths: 0, built: 0, image: "/images/properties/r5019220/01.jpg", gallery: ["/images/properties/r5019220/01.jpg"], ref: `MFS-${String(Date.now()).slice(-6)}`, description: "Add the considered property description before publishing this residence.", features: [], status: "draft", featured: false, updatedAt: new Date().toISOString() };
+    const property: ManagedProperty = { id, slug: id, title: "New private residence", location: "Marbella, Málaga", area: "Marbella", type: "Villa", price: 0, priceLabel: "€0", beds: 0, baths: 0, built: 0, image: "/images/properties/r5019220/01.webp", gallery: ["/images/properties/r5019220/01.webp"], ref: `MFS-${String(Date.now()).slice(-6)}`, description: "Add the considered property description before publishing this residence.", features: [], status: "draft", featured: false, updatedAt: new Date().toISOString() };
     setManagedProperties((current) => [property, ...current]);
     setSelectedPropertyId(id);
   }
@@ -190,7 +219,7 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
     const now = new Date().toISOString();
     const newLead: StudioLead = { ...lead, id, createdAt: now, updatedAt: now, status: "new", priority: lead.source === "property" || lead.source === "valuation" ? "high" : "normal", assignedTo: null, internalNotes: null, nextActionAt: null, viewingAt: null };
     if (!previewMode) {
-      const response = await fetch("/api/enquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...lead, privacyAccepted: true }) });
+      const response = await fetchWithTimeout("/api/enquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...lead, privacyAccepted: true }) });
       const result = await response.json() as { id?: string; error?: string };
       if (!response.ok) throw new Error(result.error || "The enquiry could not be created.");
       newLead.id = result.id || id;
@@ -412,19 +441,20 @@ function PropertyDrawer({ property, saving, previewMode, onClose, onSave }: { pr
     try {
       const urls: string[] = [];
       for (const file of Array.from(files).slice(0, 12)) {
+        const optimizedFile = await optimizePropertyImage(file);
         if (previewMode) {
-          urls.push(await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error("Image could not be read.")); reader.readAsDataURL(file); }));
+          urls.push(await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error("Image could not be read.")); reader.readAsDataURL(optimizedFile); }));
         } else {
           const form = new FormData();
-          form.set("file", file);
-          const response = await fetch("/api/studio/property-images", { method: "POST", body: form });
+          form.set("file", optimizedFile);
+          const response = await fetchWithTimeout("/api/studio/property-images", { method: "POST", body: form }, 30_000);
           const result = await response.json() as { url?: string; error?: string };
           if (!response.ok || !result.url) throw new Error(result.error || "Image could not be uploaded.");
           urls.push(result.url);
         }
       }
       if (urls.length) {
-        if (!draft.image || draft.image.includes("r5019220/01.jpg") && property.id.startsWith("new-property-")) change("image", urls[0]);
+        if (!draft.image || draft.image.includes("r5019220/01.") && property.id.startsWith("new-property-")) change("image", urls[0]);
         setGallery((current) => [...current.split("\n").filter(Boolean), ...urls].join("\n"));
       }
     } catch (error) {

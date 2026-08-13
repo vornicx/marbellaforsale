@@ -60,7 +60,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   if (Object.keys(updates).length === 1) return NextResponse.json({ error: "No valid changes supplied." }, { status: 400 });
 
-  const db = await getDb();
-  await db.update(enquiries).set(updates).where(eq(enquiries.id, id));
-  return NextResponse.json({ ok: true });
+  try {
+    const db = await getDb();
+    await db.update(enquiries).set(updates).where(eq(enquiries.id, id));
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Unable to update enquiry", error);
+    return NextResponse.json({ error: "The enquiry could not be updated. Please try again." }, { status: 500 });
+  }
 }

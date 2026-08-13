@@ -6,7 +6,7 @@ import { properties as staticProperties } from "../../data";
 import { getManagedProperties } from "../../property-store";
 import { PropertyGallery } from "../../property-gallery";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export function generateStaticParams() { return staticProperties.map(({ slug }) => ({ slug })); }
 
@@ -22,7 +22,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ slug:
   const related = properties.filter((item) => item.slug !== property.slug && (item.area === property.area || item.type === property.type)).slice(0, 3);
   const schema = { "@context": "https://schema.org", "@type": "RealEstateListing", name: property.title, description: property.description, url: `https://www.marbellaforsale.com/properties/${property.slug}`, image: property.gallery, offers: { "@type": "Offer", priceCurrency: "EUR", price: property.price, availability: "https://schema.org/InStock" }, address: { "@type": "PostalAddress", addressLocality: property.location, addressRegion: "Málaga", addressCountry: "ES" } };
   return <><Header /><main>
-    <section className="detail-hero"><img src={property.image} alt={`${property.title} in ${property.location}`} /><div className="detail-title shell"><span className="location">{property.location} · {property.ref}</span><h1>{property.title}</h1><div className="detail-bottom"><span className="detail-price">{property.priceLabel}</span><div className="detail-specs"><span>{property.beds} bedrooms</span><span>{property.baths} bathrooms</span><span>{property.built.toLocaleString("en-GB")} m² built</span>{property.plot && <span>{property.plot.toLocaleString("en-GB")} m² plot</span>}</div></div></div></section>
+    <section className="detail-hero"><img src={property.image} alt={`${property.title} in ${property.location}`} width="1600" height="1067" fetchPriority="high" decoding="async" /><div className="detail-title shell"><span className="location">{property.location} · {property.ref}</span><h1>{property.title}</h1><div className="detail-bottom"><span className="detail-price">{property.priceLabel}</span><div className="detail-specs"><span>{property.beds} bedrooms</span><span>{property.baths} bathrooms</span><span>{property.built.toLocaleString("en-GB")} m² built</span>{property.plot && <span>{property.plot.toLocaleString("en-GB")} m² plot</span>}</div></div></div></section>
     <section className="detail-overview section shell"><div><p className="eyebrow">The residence</p><h2>Space, light<br />and <em>complete privacy.</em></h2></div><div className="detail-description"><p>{property.description}</p><div className="feature-grid">{property.features.map((feature) => <span key={feature}>— &nbsp; {feature}</span>)}</div><Link className="text-link" href="#enquire" style={{ marginTop: 38 }}>Request full details <ArrowIcon /></Link></div></section>
     <PropertyGallery property={property} />
     <section className="property-enquiry section shell" id="enquire"><div className="enquiry-intro"><p className="eyebrow">Private viewing</p><h2>Experience it<br /><em>for yourself.</em></h2><p>Arrange a private viewing or request the complete brochure, floor plans and location details. Every enquiry is handled personally and with discretion.</p></div><EnquiryForm propertyTitle={property.title} propertyRef={property.ref} source="property" /></section>

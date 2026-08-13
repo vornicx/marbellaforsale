@@ -54,7 +54,7 @@ export function PropertyGallery({ property }: { property: Property }) {
       <div className="gallery-mosaic">
         {property.gallery.map((image, index) => (
           <button className={`gallery-tile gallery-tile-${index + 1}`} type="button" onClick={() => setActiveImage(index)} key={image} aria-label={`Open photo ${index + 1} of ${total}`}>
-            <img src={image} alt={`${property.title} — photo ${index + 1}`} loading="lazy" />
+            <img src={image} alt={`${property.title} — photo ${index + 1}`} width="1600" height="1067" loading="lazy" decoding="async" />
           </button>
         ))}
         <button className="gallery-open-all" type="button" onClick={() => setActiveImage(0)}><ExpandIcon /> View all {total} photos</button>
@@ -73,13 +73,13 @@ export function PropertyGallery({ property }: { property: Property }) {
             onTouchEnd={(event) => finishSwipe(event.changedTouches[0].clientX)}
           >
             <button className="gallery-direction gallery-previous" type="button" onClick={previous} aria-label="Previous photo"><ChevronIcon direction="previous" /></button>
-            <figure><img src={property.gallery[activeImage]} alt={`${property.title} — photo ${activeImage + 1} of ${total}`} /></figure>
+            <figure><img src={property.gallery[activeImage]} alt={`${property.title} — photo ${activeImage + 1} of ${total}`} width="1600" height="1067" decoding="async" /></figure>
             <button className="gallery-direction gallery-next" type="button" onClick={next} aria-label="Next photo"><ChevronIcon direction="next" /></button>
           </div>
           <div className="gallery-thumbnails" aria-label="Choose a photo">
             {property.gallery.map((image, index) => (
               <button className={index === activeImage ? "is-active" : ""} type="button" onClick={() => setActiveImage(index)} aria-label={`Show photo ${index + 1}`} aria-current={index === activeImage ? "true" : undefined} key={image}>
-                <img src={image} alt="" />
+                <img src={image} alt="" width="160" height="107" loading="lazy" decoding="async" />
               </button>
             ))}
           </div>

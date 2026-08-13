@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { asc, desc } from "drizzle-orm";
 import { getDb } from "../db";
 import { propertyRecords, type PropertyRecord } from "../db/schema";
@@ -21,6 +22,10 @@ function readList(value: string) {
   }
 }
 
+function optimizedAsset(value: string) {
+  return value.startsWith("/images/") ? value.replace(/\.jpg$/i, ".webp") : value;
+}
+
 function fromRecord(record: PropertyRecord): ManagedProperty {
   return {
     id: record.id,
@@ -36,8 +41,8 @@ function fromRecord(record: PropertyRecord): ManagedProperty {
     built: record.built,
     plot: record.plot ?? undefined,
     terrace: record.terrace ?? undefined,
-    image: record.image,
-    gallery: readList(record.galleryJson),
+    image: optimizedAsset(record.image),
+    gallery: readList(record.galleryJson).map(optimizedAsset),
     badge: record.badge ?? undefined,
     ref: record.ref,
     description: record.description,
@@ -52,8 +57,9 @@ function catalogueRecord(property: Property, index: number): ManagedProperty {
   return { ...property, id: property.slug, status: "published", featured: index < 3, updatedAt: new Date(0).toISOString() };
 }
 
-export async function getManagedProperties(includeDrafts = false): Promise<ManagedProperty[]> {
+export const getManagedProperties = cache(async (includeDrafts = false): Promise<ManagedProperty[]> => {
   const base = catalogueProperties.map(catalogueRecord);
+  if (process.env.VERCEL === "1") return includeDrafts ? base : base.filter((property) => property.status === "published");
   try {
     const db = await getDb();
     const records = await db.select().from(propertyRecords).orderBy(desc(propertyRecords.featured), desc(propertyRecords.updatedAt), asc(propertyRecords.title));
@@ -65,7 +71,7 @@ export async function getManagedProperties(includeDrafts = false): Promise<Manag
   } catch {
     return base;
   }
-}
+});
 
 export function getPreviewProperties() {
   return catalogueProperties.map(catalogueRecord);

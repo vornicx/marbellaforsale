@@ -5,7 +5,7 @@ import { ArrowIcon, Footer, Header, PropertyCard } from "../../components";
 import { areas } from "../../data";
 import { getManagedProperties } from "../../property-store";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export function generateStaticParams() { return areas.map(({ slug }) => ({ slug })); }
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> { const { slug } = await params; const area = areas.find((item) => item.slug === slug); return area ? { title: `Property for Sale in ${area.name}`, description: `${area.copy} Explore luxury property for sale in ${area.name}, Marbella.` } : {}; }

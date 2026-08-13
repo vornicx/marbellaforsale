@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Property } from "./data";
+import { fetchWithTimeout } from "./fetch-client";
 
 export function ArrowIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>;
@@ -214,7 +215,7 @@ export function PropertyCard({ property, priority = false, showCompare = false, 
   return (
     <article className={`property-card ${property.badge ? "has-badge" : ""}`}>
       <Link href={`/properties/${property.slug}`} className="property-image">
-        <img src={property.image} alt={`${property.title}, ${property.location}`} loading={priority ? "eager" : "lazy"} />
+        <img src={property.image} alt={`${property.title}, ${property.location}`} width="1600" height="1067" loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" />
         {property.badge && <span className="property-badge">{property.badge}</span>}
         <span className="view-property">View residence <ArrowIcon /></span>
       </Link>
@@ -342,7 +343,7 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
             <div className="comparison-chips">
               {compared.map((property) => (
                 <div className="comparison-chip" key={property.slug}>
-                  <img src={property.image} alt="" />
+                  <img src={property.image} alt="" width="160" height="107" loading="lazy" decoding="async" />
                   <span>{property.title}</span>
                   <button type="button" onClick={() => toggleCompare(property)} aria-label={`Remove ${property.title} from comparison`}><CloseIcon /></button>
                 </div>
@@ -362,7 +363,7 @@ export function PropertyResults({ properties, initialFilters = {} }: { propertie
               <div className="comparison-labels"><i aria-hidden="true" /><span>Residence</span><span>Price</span><span>Location</span><span>Bedrooms</span><span>Bathrooms</span><span>Built area</span><span>Plot / terrace</span></div>
               {compared.map((property) => (
                 <article className="comparison-column" key={property.slug}>
-                  <div className="comparison-image"><img src={property.image} alt={`${property.title}, ${property.location}`} /><button type="button" onClick={() => toggleCompare(property)} aria-label={`Remove ${property.title} from comparison`}><CloseIcon /></button></div>
+                  <div className="comparison-image"><img src={property.image} alt={`${property.title}, ${property.location}`} width="800" height="534" loading="lazy" decoding="async" /><button type="button" onClick={() => toggleCompare(property)} aria-label={`Remove ${property.title} from comparison`}><CloseIcon /></button></div>
                   <strong data-label="Residence">{property.title}</strong><span data-label="Price">{property.priceLabel}</span><span data-label="Location">{property.location}</span><span data-label="Bedrooms">{property.beds}</span><span data-label="Bathrooms">{property.baths}</span><span data-label="Built area">{property.built.toLocaleString("en-GB")} m²</span><span data-label="Plot / terrace">{property.plot ? `${property.plot.toLocaleString("en-GB")} m² plot` : property.terrace ? `${property.terrace.toLocaleString("en-GB")} m² terrace` : "Available on request"}</span>
                   <Link href={`/properties/${property.slug}`}>View property <ArrowIcon /></Link>
                 </article>
@@ -387,7 +388,7 @@ export function EnquiryForm({ propertyTitle, propertyRef, source = "contact" }: 
     const form = event.currentTarget;
     const values = new FormData(form);
     try {
-      const response = await fetch("/api/enquiries", {
+      const response = await fetchWithTimeout("/api/enquiries", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

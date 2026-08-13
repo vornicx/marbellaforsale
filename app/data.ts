@@ -20,7 +20,7 @@ export type Property = {
 };
 
 const localGallery = (reference: string) =>
-  ["01", "02", "03", "04"].map((photo) => `/images/properties/${reference}/${photo}.jpg`);
+  ["01", "02", "03", "04"].map((photo) => `/images/properties/${reference}/${photo}.webp`);
 
 const madronalGallery = localGallery("r5019220");
 const nuevaGallery = localGallery("r5421445");

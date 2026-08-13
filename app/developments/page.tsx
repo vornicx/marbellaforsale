@@ -4,7 +4,7 @@ import { ArrowIcon, Footer, Header, PropertyCard } from "../components";
 import { imageSet } from "../data";
 import { getManagedProperties } from "../property-store";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export const metadata: Metadata = { title: "New Developments in Marbella", description: "Explore carefully selected new-build and off-plan villas, apartments and penthouses across Marbella and the Costa del Sol." };
 

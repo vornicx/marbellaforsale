@@ -11,9 +11,8 @@ export const metadata: Metadata = { title: "Owner Studio", robots: { index: fals
 export const dynamic = "force-dynamic";
 
 export default async function StudioPage() {
-  const requestHeaders = await headers();
+  const [requestHeaders, user] = await Promise.all([headers(), getChatGPTUser()]);
   const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
-  const user = await getChatGPTUser();
   const isPublicPreview = host.includes("vercel.app") || host.startsWith("terminal.local") || process.env.VERCEL === "1";
 
   if (!user && isPublicPreview) {
@@ -23,8 +22,10 @@ export default async function StudioPage() {
 
   const authenticatedUser = user || await requireChatGPTUser("/studio");
   const db = await getDb();
-  const managedProperties = await getManagedProperties(true);
-  const records = await db.select().from(enquiries).orderBy(desc(enquiries.createdAt)).limit(250);
+  const [managedProperties, records] = await Promise.all([
+    getManagedProperties(true),
+    db.select().from(enquiries).orderBy(desc(enquiries.createdAt)).limit(250),
+  ]);
   const leads: StudioLead[] = records.map((lead) => ({
     ...lead,
     createdAt: lead.createdAt.toISOString(),

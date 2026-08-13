@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getDb } from "../../../../../db";
 import { propertyRecords } from "../../../../../db/schema";
 import { getChatGPTUser } from "../../../../chatgpt-auth";
@@ -86,6 +87,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       target: propertyRecords.slug,
       set: { ...values, createdAt: undefined },
     });
+    revalidatePath("/");
+    revalidatePath("/properties");
+    revalidatePath("/developments");
+    revalidatePath("/areas/[slug]", "page");
+    revalidatePath(`/properties/${slug}`);
     return NextResponse.json({ ok: true, property: { ...values, createdAt: values.createdAt.toISOString(), updatedAt: values.updatedAt.toISOString() } });
   } catch (error) {
     console.error("Unable to save property", error);
