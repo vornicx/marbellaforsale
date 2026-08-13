@@ -18,7 +18,7 @@ export default async function StudioPage() {
 
   if (!user && isPublicPreview) {
     const previewProperties = getPreviewProperties();
-    return <StudioDashboard initialLeads={demoLeads} initialProperties={previewProperties} userName="Marbella team" previewMode />;
+    return <StudioDashboard initialLeads={demoLeads} initialProperties={previewProperties} initialNow={new Date().toISOString()} userName="Marbella team" previewMode />;
   }
 
   const authenticatedUser = user || await requireChatGPTUser("/studio");
@@ -34,7 +34,7 @@ export default async function StudioPage() {
     propertySlug: managedProperties.find((property) => property.ref === lead.propertyRef)?.slug || null,
   }));
 
-  return <StudioDashboard initialLeads={leads} initialProperties={managedProperties} userName={authenticatedUser.fullName || "Marbella team"} />;
+  return <StudioDashboard initialLeads={leads} initialProperties={managedProperties} initialNow={new Date().toISOString()} userName={authenticatedUser.fullName || "Marbella team"} />;
 }
 
 const demoLeads: StudioLead[] = [

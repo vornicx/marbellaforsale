@@ -26,7 +26,8 @@ export type StudioLead = {
 };
 
 type LeadChanges = Partial<Pick<StudioLead, "status" | "priority" | "assignedTo" | "internalNotes" | "nextActionAt" | "viewingAt">>;
-type StudioSection = "overview" | "enquiries" | "viewings" | "properties";
+type StudioSection = "overview" | "enquiries" | "viewings" | "properties" | "insights" | "content";
+type NewLead = Pick<StudioLead, "firstName" | "lastName" | "email" | "phone" | "message" | "source" | "propertyTitle" | "propertyRef" | "propertySlug">;
 
 const statusOptions = ["new", "contacted", "qualified", "viewing", "valuation", "closed", "archived"];
 const statusLabels: Record<string, string> = {
@@ -40,6 +41,14 @@ function SearchIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><circ
 function MailIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" /><path d="m4 7 8 6 8-6" /></svg>; }
 function PhoneIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 3.8 4.6 5.1c-.9.5-.9 2.3-.4 3.8 1.7 5.1 5.8 9.2 10.9 10.9 1.5.5 3.3.5 3.8-.4l1.3-2.6-4.3-2.4-1.4 1.8c-2.8-1.2-5.5-3.9-6.7-6.7l1.8-1.4-2.4-4.3Z" /></svg>; }
 function MessageIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 9 9 0 0 1-3.6-.8L4 20l1.3-4A7.8 7.8 0 1 1 20 11.5Z" /><path d="M8 9.5c1 2.7 2.8 4.5 5.5 5.5" /></svg>; }
+function OverviewIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v10h-6zM4 14h6v6H4zM14 18h6v2h-6z" /></svg>; }
+function EnquiryIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4V5Z" /><path d="M8 9h8M8 12h5" /></svg>; }
+function CalendarIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4zM8 3v6M16 3v6M4 10h16" /></svg>; }
+function PropertyIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7M6 9.5V20h12V9.5M10 20v-6h4v6" /></svg>; }
+function InsightsIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7" /></svg>; }
+function ContentIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h7" /></svg>; }
+function DownloadIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 20h16" /></svg>; }
+function PlusIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>; }
 
 function relativeTime(value: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60000));
@@ -53,6 +62,11 @@ function relativeTime(value: string) {
 
 function sourceLabel(source: string) { return sourceLabels[source] || source; }
 
+function propertyScore(property: ManagedProperty) {
+  const checks = [property.title.length >= 20, property.description.length >= 120, property.gallery.length >= 4, property.features.length >= 5, property.location.length >= 8, property.price > 0, property.beds > 0, property.built > 0];
+  return Math.round(checks.filter(Boolean).length / checks.length * 100);
+}
+
 function formatDate(value: string | null, includeTime = true) {
   if (!value) return "Not scheduled";
   return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", day: "2-digit", month: "short", year: "numeric", ...(includeTime ? { hour: "2-digit", minute: "2-digit" } : {}) }).format(new Date(value));
@@ -65,7 +79,7 @@ function toDateInput(value: string | null) {
 
 function fromDateInput(value: string) { return value ? new Date(value).toISOString() : null; }
 
-export function StudioDashboard({ initialLeads, initialProperties, userName, previewMode = false }: { initialLeads: StudioLead[]; initialProperties: ManagedProperty[]; userName: string; previewMode?: boolean }) {
+export function StudioDashboard({ initialLeads, initialProperties, initialNow, userName, previewMode = false }: { initialLeads: StudioLead[]; initialProperties: ManagedProperty[]; initialNow: string; userName: string; previewMode?: boolean }) {
   const [leads, setLeads] = useState(initialLeads);
   const [managedProperties, setManagedProperties] = useState(initialProperties);
   const [section, setSection] = useState<StudioSection>("overview");
@@ -76,8 +90,10 @@ export function StudioDashboard({ initialLeads, initialProperties, userName, pre
   const [sort, setSort] = useState("newest");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
+  const [creatingLead, setCreatingLead] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const openLeads = useMemo(() => leads.filter((lead) => !["closed", "archived"].includes(lead.status)), [leads]);
   const selectedLead = leads.find((lead) => lead.id === selectedLeadId) || null;
@@ -96,26 +112,38 @@ export function StudioDashboard({ initialLeads, initialProperties, userName, pre
     }).sort((a, b) => sort === "oldest" ? new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime() : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [leads, priorityFilter, query, sort, sourceFilter, statusFilter]);
   const priorityLeads = (openLeads.filter((lead) => lead.priority === "high").length ? openLeads.filter((lead) => lead.priority === "high") : openLeads).slice(0, 5);
+  const dueActions = openLeads.filter((lead) => lead.nextActionAt && new Date(lead.nextActionAt).getTime() <= new Date(initialNow).getTime() + 24 * 60 * 60_000);
+  const unscheduledQualified = openLeads.filter((lead) => ["qualified", "viewing"].includes(lead.status) && !lead.viewingAt);
+  const propertyDemand = managedProperties.map((property) => ({ property, leads: leads.filter((lead) => lead.propertyRef === property.ref).length })).sort((a, b) => b.leads - a.leads);
+  const contentScores = managedProperties.map((property) => ({ property, score: propertyScore(property) }));
+  const averageContentScore = contentScores.length ? Math.round(contentScores.reduce((sum, item) => sum + item.score, 0) / contentScores.length) : 0;
 
   useEffect(() => {
-    if (!selectedLead && !selectedProperty) return;
+    if (!selectedLead && !selectedProperty && !creatingLead) return;
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setSelectedLeadId(null); };
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") { setSelectedLeadId(null); setSelectedPropertyId(null); setCreatingLead(false); } };
     window.addEventListener("keydown", close);
     return () => { document.body.style.overflow = overflow; window.removeEventListener("keydown", close); };
-  }, [selectedLead, selectedProperty]);
+  }, [selectedLead, selectedProperty, creatingLead]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 3200);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
 
   async function updateLead(id: string, changes: LeadChanges) {
     const previous = leads;
     setError("");
     setUpdating(id);
     setLeads((current) => current.map((lead) => lead.id === id ? { ...lead, ...changes, updatedAt: new Date().toISOString() } : lead));
-    if (previewMode) { setUpdating(null); return true; }
+    if (previewMode) { setUpdating(null); setNotice("Enquiry updated in demonstration mode"); return true; }
     try {
       const response = await fetch(`/api/enquiries/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(changes) });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "The enquiry could not be updated.");
+      setNotice("Enquiry updated");
       return true;
     } catch (updateError) {
       setLeads(previous);
@@ -134,11 +162,12 @@ export function StudioDashboard({ initialLeads, initialProperties, userName, pre
     setUpdating(property.id);
     const next = { ...property, updatedAt: new Date().toISOString() };
     setManagedProperties((current) => current.map((item) => item.id === property.id ? next : item));
-    if (previewMode) { setUpdating(null); return true; }
+    if (previewMode) { setUpdating(null); setNotice("Property updated in demonstration mode"); return true; }
     try {
       const response = await fetch(`/api/studio/properties/${encodeURIComponent(property.id)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(next) });
       const result = await response.json() as { error?: string };
       if (!response.ok) throw new Error(result.error || "The property could not be saved.");
+      setNotice(property.status === "published" ? "Property published" : "Property saved");
       return true;
     } catch (updateError) {
       setManagedProperties(previous);
@@ -156,30 +185,58 @@ export function StudioDashboard({ initialLeads, initialProperties, userName, pre
     setSelectedPropertyId(id);
   }
 
+  async function createLead(lead: NewLead) {
+    const id = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `lead-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+    const newLead: StudioLead = { ...lead, id, createdAt: now, updatedAt: now, status: "new", priority: lead.source === "property" || lead.source === "valuation" ? "high" : "normal", assignedTo: null, internalNotes: null, nextActionAt: null, viewingAt: null };
+    if (!previewMode) {
+      const response = await fetch("/api/enquiries", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...lead, privacyAccepted: true }) });
+      const result = await response.json() as { id?: string; error?: string };
+      if (!response.ok) throw new Error(result.error || "The enquiry could not be created.");
+      newLead.id = result.id || id;
+    }
+    setLeads((current) => [newLead, ...current]);
+    setCreatingLead(false);
+    setNotice("Enquiry added to the pipeline");
+    return true;
+  }
+
+  function exportEnquiries() {
+    const headers = ["Name", "Email", "Phone", "Source", "Property", "Reference", "Status", "Priority", "Assigned to", "Received", "Next action", "Viewing", "Message", "Internal notes"];
+    const rows = leads.map((lead) => [ `${lead.firstName} ${lead.lastName}`, lead.email, lead.phone, sourceLabel(lead.source), lead.propertyTitle || "", lead.propertyRef || "", statusLabels[lead.status] || lead.status, lead.priority, lead.assignedTo || "", lead.createdAt, lead.nextActionAt || "", lead.viewingAt || "", lead.message, lead.internalNotes || "" ]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = `marbella-enquiries-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url);
+    setNotice("Enquiries exported");
+  }
+
   return <main className="studio">
     <aside className="studio-sidebar">
-      <Link href="/" className="wordmark"><strong>MARBELLA</strong><span>FOR SALE</span></Link>
+      <div className="studio-brand"><Link href="/" className="wordmark"><strong>MARBELLA</strong><span>FOR SALE</span></Link><small>Owner Studio</small></div>
       <nav aria-label="Owner Studio">
-        <button className={section === "overview" ? "active" : ""} onClick={() => setSection("overview")}>Overview</button>
-        <button className={section === "enquiries" ? "active" : ""} onClick={() => openEnquiries()}>Enquiries <span>{openLeads.length}</span></button>
-        <button className={section === "viewings" ? "active" : ""} onClick={() => setSection("viewings")}>Viewings <span>{viewingLeads.length}</span></button>
-        <button className={section === "properties" ? "active" : ""} onClick={() => setSection("properties")}>Properties <span>{propertyCount}</span></button>
-        <button disabled>Content &amp; SEO <small>Next</small></button>
+        <button className={section === "overview" ? "active" : ""} onClick={() => setSection("overview")}><OverviewIcon /><span>Overview</span></button>
+        <button className={section === "enquiries" ? "active" : ""} onClick={() => openEnquiries()}><EnquiryIcon /><span>Enquiries</span><b>{openLeads.length}</b></button>
+        <button className={section === "viewings" ? "active" : ""} onClick={() => setSection("viewings")}><CalendarIcon /><span>Viewings</span><b>{viewingLeads.length}</b></button>
+        <button className={section === "properties" ? "active" : ""} onClick={() => setSection("properties")}><PropertyIcon /><span>Properties</span><b>{propertyCount}</b></button>
+        <button className={section === "insights" ? "active" : ""} onClick={() => setSection("insights")}><InsightsIcon /><span>Insights</span></button>
+        <button className={section === "content" ? "active" : ""} onClick={() => setSection("content")}><ContentIcon /><span>Content &amp; SEO</span><b>{averageContentScore}</b></button>
       </nav>
-      <Link href="/">Return to website <ArrowIcon /></Link>
+      <div className="studio-sidebar-footer"><span><i /> Systems operational</span><Link href="/">View live website <ArrowIcon /></Link></div>
     </aside>
 
     <section className="studio-main">
-      <header className="studio-header"><div><p className="studio-kicker">Marbella For Sale · Owner Studio</p><h1>{section === "overview" ? `Good day, ${userName}.` : section === "enquiries" ? "Enquiry pipeline" : section === "viewings" ? "Private viewings" : "Property portfolio"}</h1><p>{section === "overview" ? "A live view of demand, priorities and next commercial actions." : section === "enquiries" ? "Every website enquiry, its context and its current commercial status." : section === "viewings" ? "Scheduled appointments and the clients behind them." : "Create, review and publish every residence from one considered workspace."}</p></div>{previewMode ? <span className="studio-preview-label">Demonstration workspace</span> : <Link href="/signout-with-chatgpt?return_to=/" className="studio-account" aria-label="Sign out">MF</Link>}</header>
-      {previewMode && <div className="studio-preview-note"><span>Secure preview</span><p>Sample enquiries demonstrate the complete owner workflow. No client information is exposed in this public view.</p></div>}
+      <header className="studio-header"><div><p className="studio-kicker">Marbella For Sale · Owner Studio</p><h1>{section === "overview" ? `Good day, ${userName}.` : section === "enquiries" ? "Enquiry pipeline" : section === "viewings" ? "Private viewings" : section === "properties" ? "Property portfolio" : section === "insights" ? "Commercial intelligence" : "Content quality"}</h1><p>{section === "overview" ? "The priorities, opportunities and decisions that deserve attention today." : section === "enquiries" ? "Every relationship, its context and its next commercial step." : section === "viewings" ? "A precise agenda of private appointments and clients awaiting a date." : section === "properties" ? "Create, curate and publish every residence from one considered workspace." : section === "insights" ? "A clear reading of demand, conversion and portfolio performance." : "Protect the presentation, discoverability and search readiness of every listing."}</p></div><div className="studio-header-actions">{section === "enquiries" && <button type="button" onClick={exportEnquiries}><DownloadIcon /> Export</button>}{["overview", "enquiries"].includes(section) && <button className="studio-primary-action" type="button" onClick={() => setCreatingLead(true)}><PlusIcon /> New enquiry</button>}{section === "properties" && <button className="studio-primary-action" type="button" onClick={createProperty}><PlusIcon /> Add property</button>}{previewMode ? <span className="studio-preview-label">Demonstration</span> : <Link href="/signout-with-chatgpt?return_to=/" className="studio-account" aria-label="Sign out">MF</Link>}</div></header>
+      {previewMode && <div className="studio-preview-note"><span>Secure demonstration</span><p>Representative data shows the complete workflow without exposing client information.</p></div>}
       {error && <p className="studio-alert" role="alert">{error}</p>}
+      {notice && <p className="studio-toast" role="status"><span>✓</span>{notice}</p>}
 
       {section === "overview" && <>
+        <div className="studio-attention"><div><span>Today&apos;s focus</span><strong>{dueActions.length ? `${dueActions.length} follow-up${dueActions.length === 1 ? "" : "s"} due within 24 hours` : "Every opportunity is on schedule"}</strong></div><button onClick={() => openEnquiries()}>{dueActions.length ? "Review priorities" : "Open pipeline"}<ArrowIcon /></button></div>
         <div className="studio-kpis">
-          <button className="kpi" onClick={() => openEnquiries("new")}><span>New enquiries</span><strong>{leads.filter((lead) => lead.status === "new").length}</strong><small>Awaiting first contact</small><ArrowIcon /></button>
-          <button className="kpi" onClick={() => openEnquiries("qualified")}><span>Qualified buyers</span><strong>{leads.filter((lead) => ["qualified", "viewing"].includes(lead.status)).length}</strong><small>Active purchase intent</small><ArrowIcon /></button>
-          <button className="kpi" onClick={() => setSection("properties")}><span>Live properties</span><strong>{propertyCount}</strong><small>Published with verified imagery</small><ArrowIcon /></button>
-          <button className="kpi" onClick={() => openEnquiries()}><span>Open opportunities</span><strong>{openLeads.length}</strong><small>{leads.filter((lead) => lead.source === "valuation" && !["closed", "archived"].includes(lead.status)).length} seller leads</small><ArrowIcon /></button>
+          <button className="kpi" onClick={() => openEnquiries("new")}><span>New enquiries</span><strong>{leads.filter((lead) => lead.status === "new").length}</strong><small>Awaiting first contact</small><i className="kpi-trend">Live</i><ArrowIcon /></button>
+          <button className="kpi" onClick={() => openEnquiries("qualified")}><span>Qualified buyers</span><strong>{leads.filter((lead) => ["qualified", "viewing"].includes(lead.status)).length}</strong><small>Active purchase intent</small><i className="kpi-trend">Pipeline</i><ArrowIcon /></button>
+          <button className="kpi" onClick={() => setSection("viewings")}><span>Private viewings</span><strong>{viewingLeads.length}</strong><small>{unscheduledQualified.length} awaiting schedule</small><i className="kpi-trend">Agenda</i><ArrowIcon /></button>
+          <button className="kpi" onClick={() => setSection("content")}><span>Portfolio quality</span><strong>{averageContentScore}<sup>%</sup></strong><small>{propertyCount} published residences</small><i className="kpi-trend">SEO</i><ArrowIcon /></button>
         </div>
         <div className="studio-grid">
           <article className="studio-panel studio-priority"><div className="panel-head"><div><span>Commercial focus</span><h2>Priority enquiries</h2></div><button onClick={() => openEnquiries()}>View pipeline <ArrowIcon /></button></div>
@@ -189,6 +246,7 @@ export function StudioDashboard({ initialLeads, initialProperties, userName, pre
             {nextActions.length ? <div className="next-action-list">{nextActions.map((lead) => <button type="button" onClick={() => setSelectedLeadId(lead.id)} key={lead.id}><time>{formatDate(lead.nextActionAt)}</time><strong>{lead.firstName} {lead.lastName}</strong><span>{lead.propertyRef || sourceLabel(lead.source)}</span><ArrowIcon /></button>)}</div> : <EmptyStudio title="Nothing scheduled" copy="Set a next action from any enquiry to keep every opportunity moving." />}
           </article>
         </div>
+        <div className="studio-lower-grid"><article className="studio-panel studio-demand"><div className="panel-head"><div><span>Buyer attention</span><h2>Most requested residences</h2></div><button onClick={() => setSection("insights")}>View insights <ArrowIcon /></button></div>{propertyDemand.slice(0, 4).map(({ property, leads: count }, index) => <button type="button" onClick={() => { setSection("properties"); setSelectedPropertyId(property.id); }} key={property.id}><span>0{index + 1}</span><img src={property.image} alt="" /><div><strong>{property.title}</strong><small>{property.ref} · {property.location}</small></div><b>{count} {count === 1 ? "enquiry" : "enquiries"}</b><ArrowIcon /></button>)}</article><article className="studio-panel studio-portfolio-health"><div className="panel-head"><div><span>Publishing standard</span><h2>Portfolio health</h2></div></div><div className="health-score"><strong>{averageContentScore}<sup>%</sup></strong><span>Average listing quality</span></div><div className="health-bar"><i style={{ width: `${averageContentScore}%` }} /></div><p>{contentScores.filter((item) => item.score < 90).length ? `${contentScores.filter((item) => item.score < 90).length} residences can still be improved before promotion.` : "Every published residence meets the complete editorial standard."}</p><button onClick={() => setSection("content")}>Review content quality <ArrowIcon /></button></article></div>
       </>}
 
       {section === "enquiries" && <section className="studio-panel enquiry-pipeline">
@@ -204,15 +262,19 @@ export function StudioDashboard({ initialLeads, initialProperties, userName, pre
       </section>}
 
       {section === "viewings" && <section className="viewings-section">
-        <div className="viewings-summary"><span>{viewingLeads.length} scheduled</span><p>Every appointment remains connected to the original enquiry, property and follow-up plan.</p></div>
+        <div className="viewings-summary"><div><span>{viewingLeads.length} scheduled</span><strong>{unscheduledQualified.length} qualified clients still need an appointment</strong></div><p>Every appointment remains connected to the original enquiry, property and follow-up plan.</p></div>
         {viewingLeads.length ? <div className="viewing-board">{viewingLeads.map((lead) => <button type="button" className="viewing-card" onClick={() => setSelectedLeadId(lead.id)} key={lead.id}><div><span>{formatDate(lead.viewingAt, false)}</span><strong>{new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }).format(new Date(lead.viewingAt || ""))}</strong></div><section><small>{lead.propertyRef || "Private appointment"}</small><h2>{lead.propertyTitle || "Confidential property consultation"}</h2><p>{lead.firstName} {lead.lastName} · {lead.phone}</p></section><ArrowIcon /></button>)}</div> : <EmptyStudio title="No viewings scheduled" copy="Open an enquiry and add a viewing date. It will appear here immediately." />}
+        {unscheduledQualified.length > 0 && <div className="unscheduled-section"><div className="panel-head"><div><span>Action required</span><h2>Awaiting a viewing date</h2></div></div>{unscheduledQualified.map((lead) => <LeadRow key={lead.id} lead={lead} updating={updating === lead.id} onOpen={() => setSelectedLeadId(lead.id)} onStatus={(status) => updateLead(lead.id, { status })} />)}</div>}
       </section>}
 
       {section === "properties" && <PropertyManager properties={managedProperties} onCreate={createProperty} onOpen={(id) => setSelectedPropertyId(id)} />}
+      {section === "insights" && <InsightsView leads={leads} properties={managedProperties} onLead={(id) => setSelectedLeadId(id)} onStatus={(status) => openEnquiries(status)} onProperty={(id) => { setSection("properties"); setSelectedPropertyId(id); }} />}
+      {section === "content" && <ContentQuality properties={managedProperties} onOpen={(id) => setSelectedPropertyId(id)} />}
     </section>
 
     {selectedLead && <LeadDrawer key={selectedLead.id} lead={selectedLead} saving={updating === selectedLead.id} onClose={() => setSelectedLeadId(null)} onSave={(changes) => updateLead(selectedLead.id, changes)} />}
     {selectedProperty && <PropertyDrawer key={selectedProperty.id} property={selectedProperty} saving={updating === selectedProperty.id} previewMode={previewMode} onClose={() => setSelectedPropertyId(null)} onSave={saveProperty} />}
+    {creatingLead && <NewLeadDrawer properties={managedProperties.filter((property) => property.status === "published")} onClose={() => setCreatingLead(false)} onCreate={createLead} />}
   </main>;
 }
 
@@ -260,6 +322,41 @@ function LeadDrawer({ lead, saving, onClose, onSave }: { lead: StudioLead; savin
       </form>
     </aside>
   </div>;
+}
+
+function NewLeadDrawer({ properties, onClose, onCreate }: { properties: ManagedProperty[]; onClose: () => void; onCreate: (lead: NewLead) => Promise<boolean> }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [source, setSource] = useState("property");
+  const [propertyRef, setPropertyRef] = useState("");
+  const selectedProperty = properties.find((property) => property.ref === propertyRef);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true); setError("");
+    const data = new FormData(event.currentTarget);
+    try {
+      await onCreate({ firstName: String(data.get("firstName") || "").trim(), lastName: String(data.get("lastName") || "").trim(), email: String(data.get("email") || "").trim(), phone: String(data.get("phone") || "").trim(), message: String(data.get("message") || "").trim(), source, propertyRef: selectedProperty?.ref || null, propertyTitle: selectedProperty?.title || null, propertySlug: selectedProperty?.slug || null });
+    } catch (creationError) { setError(creationError instanceof Error ? creationError.message : "The enquiry could not be created."); setSaving(false); }
+  }
+
+  return <div className="studio-drawer-shell"><button className="studio-drawer-backdrop" type="button" onClick={onClose} aria-label="Close new enquiry" /><aside className="studio-drawer lead-create-drawer" role="dialog" aria-modal="true" aria-labelledby="new-lead-title"><header><div><span>Manual CRM entry</span><h2 id="new-lead-title">New<br />enquiry</h2></div><button type="button" onClick={onClose} aria-label="Close new enquiry"><CloseIcon /></button></header><p className="drawer-intro">Record a phone call, WhatsApp conversation, walk-in request or private introduction in the same commercial pipeline.</p>{error && <p className="studio-alert">{error}</p>}<form className="drawer-form" onSubmit={submit}><div className="drawer-form-grid"><label>First name<input name="firstName" required autoFocus /></label><label>Last name<input name="lastName" required /></label></div><div className="drawer-form-grid"><label>Email<input name="email" required type="email" /></label><label>Phone<input name="phone" required type="tel" /></label></div><label>Enquiry type<select value={source} onChange={(event) => { setSource(event.target.value); if (event.target.value !== "property") setPropertyRef(""); }}>{Object.entries(sourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>{source === "property" && <label>Property<select value={propertyRef} onChange={(event) => setPropertyRef(event.target.value)}><option value="">General property search</option>{properties.map((property) => <option value={property.ref} key={property.id}>{property.ref} · {property.title}</option>)}</select></label>}<label>Client request<textarea name="message" required placeholder="Record the client brief, budget, timing and relevant context…" /></label><button className="drawer-save" type="submit" disabled={saving}>{saving ? "Adding enquiry…" : "Add to pipeline"}<ArrowIcon /></button></form></aside></div>;
+}
+
+function InsightsView({ leads, properties, onLead, onStatus, onProperty }: { leads: StudioLead[]; properties: ManagedProperty[]; onLead: (id: string) => void; onStatus: (status: string) => void; onProperty: (id: string) => void }) {
+  const active = leads.filter((lead) => !["closed", "archived"].includes(lead.status));
+  const maxStatus = Math.max(1, ...statusOptions.map((status) => leads.filter((lead) => lead.status === status).length));
+  const sources = Object.entries(sourceLabels).map(([source, label]) => ({ label, count: leads.filter((lead) => lead.source === source).length })).sort((a, b) => b.count - a.count);
+  const demand = properties.map((property) => ({ property, count: leads.filter((lead) => lead.propertyRef === property.ref).length })).sort((a, b) => b.count - a.count);
+  const conversion = leads.length ? Math.round(leads.filter((lead) => ["qualified", "viewing", "closed"].includes(lead.status)).length / leads.length * 100) : 0;
+
+  return <section className="insights-view"><div className="insight-summary"><article><span>Active opportunities</span><strong>{active.length}</strong><small>{leads.filter((lead) => lead.priority === "high" && !["closed", "archived"].includes(lead.status)).length} high priority</small></article><article><span>Qualification rate</span><strong>{conversion}<sup>%</sup></strong><small>Qualified, viewing or closed</small></article><article><span>Viewing intent</span><strong>{leads.filter((lead) => lead.viewingAt).length}</strong><small>Appointments scheduled</small></article><article><span>Seller opportunities</span><strong>{leads.filter((lead) => lead.source === "valuation").length}</strong><small>Valuation requests</small></article></div><div className="insights-grid"><article className="studio-panel funnel-panel"><div className="panel-head"><div><span>Relationship funnel</span><h2>Pipeline distribution</h2></div></div><div className="funnel-chart">{statusOptions.filter((status) => status !== "archived").map((status) => { const count = leads.filter((lead) => lead.status === status).length; return <button type="button" onClick={() => onStatus(status)} aria-label={`View ${statusLabels[status].toLowerCase()} enquiries`} key={status}><span>{statusLabels[status]}</span><i><b style={{ width: `${Math.max(count ? 12 : 0, count / maxStatus * 100)}%` }} /></i><strong>{count}</strong></button>; })}</div></article><article className="studio-panel source-panel"><div className="panel-head"><div><span>Acquisition</span><h2>Enquiry sources</h2></div></div>{sources.map((source, index) => <div className="source-row" key={source.label}><span>0{index + 1}</span><strong>{source.label}</strong><i><b style={{ width: `${leads.length ? source.count / leads.length * 100 : 0}%` }} /></i><em>{source.count}</em></div>)}</article></div><article className="studio-panel demand-table"><div className="panel-head"><div><span>Portfolio demand</span><h2>Properties generating attention</h2></div></div>{demand.map(({ property, count }) => <button type="button" onClick={() => onProperty(property.id)} key={property.id}><img src={property.image} alt="" /><div><small>{property.ref} · {property.area}</small><strong>{property.title}</strong></div><span>{count} {count === 1 ? "enquiry" : "enquiries"}</span><i>{leads.filter((lead) => lead.propertyRef === property.ref && lead.status === "viewing").length} viewings</i><ArrowIcon /></button>)}</article><article className="studio-panel recent-activity"><div className="panel-head"><div><span>Live activity</span><h2>Latest relationship updates</h2></div></div>{[...leads].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).slice(0, 6).map((lead) => <button type="button" onClick={() => onLead(lead.id)} key={lead.id}><i /><div><strong>{lead.firstName} {lead.lastName}</strong><span>{statusLabels[lead.status]} · {lead.propertyRef || sourceLabel(lead.source)}</span></div><time suppressHydrationWarning>{relativeTime(lead.updatedAt)}</time><ArrowIcon /></button>)}</article></section>;
+}
+
+function ContentQuality({ properties, onOpen }: { properties: ManagedProperty[]; onOpen: (id: string) => void }) {
+  const audited = properties.map((property) => ({ property, score: propertyScore(property), issues: [property.title.length < 20 && "Strengthen title", property.description.length < 120 && "Expand description", property.gallery.length < 4 && "Add photography", property.features.length < 5 && "Add key features", property.price <= 0 && "Set price", property.beds <= 0 && "Set bedrooms", property.built <= 0 && "Set built area"].filter(Boolean) as string[] })).sort((a, b) => a.score - b.score);
+  const average = audited.length ? Math.round(audited.reduce((sum, item) => sum + item.score, 0) / audited.length) : 0;
+  return <section className="content-quality"><div className="content-overview"><div className="content-score-ring" style={{ "--score": `${average * 3.6}deg` } as React.CSSProperties}><span><strong>{average}</strong><small>/ 100</small></span></div><div><span>Portfolio standard</span><h2>{average >= 90 ? "Excellent editorial readiness" : average >= 75 ? "Strong, with room to refine" : "Content requires attention"}</h2><p>Every residence is checked for listing depth, photography, search clarity and essential commercial information.</p></div><aside><strong>{audited.filter((item) => item.score >= 90).length}</strong><span>Ready to promote</span><strong>{audited.filter((item) => item.issues.length).length}</strong><span>Need attention</span></aside></div><div className="content-checks"><article><span>01</span><strong>Search foundations</strong><p>Clear location, reference, property type and complete structured information.</p></article><article><span>02</span><strong>Editorial depth</strong><p>Considered titles, useful descriptions and distinctive property features.</p></article><article><span>03</span><strong>Visual readiness</strong><p>Verified cover photography and a gallery substantial enough to build trust.</p></article></div><div className="content-audit-list"><div className="content-audit-head"><span>Residence</span><span>Quality</span><span>Editorial status</span><span>Publication</span></div>{audited.map(({ property, score, issues }) => <button type="button" onClick={() => onOpen(property.id)} key={property.id}><img src={property.image} alt="" /><div><small>{property.ref} · {property.area}</small><strong>{property.title}</strong></div><div className={`audit-score audit-score-${score >= 90 ? "high" : score >= 75 ? "medium" : "low"}`}><span>{score}%</span><i><b style={{ width: `${score}%` }} /></i></div><span className="audit-issues">{issues.length ? issues.slice(0, 2).join(" · ") : "Complete and promotion-ready"}</span><span className={`property-state property-state-${property.status}`}>{property.status}</span><ArrowIcon /></button>)}</div></section>;
 }
 
 function PropertyManager({ properties, onCreate, onOpen }: { properties: ManagedProperty[]; onCreate: () => void; onOpen: (id: string) => void }) {

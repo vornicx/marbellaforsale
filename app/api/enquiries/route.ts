@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       priority: source === "property" || source === "valuation" ? "high" : "normal",
     });
 
-    return NextResponse.json({ ok: true, reference: `MFS-${id.slice(0, 8).toUpperCase()}` }, { status: 201 });
+    return NextResponse.json({ ok: true, id, reference: `MFS-${id.slice(0, 8).toUpperCase()}` }, { status: 201 });
   } catch (error) {
     console.error("Unable to create enquiry", error);
     return NextResponse.json({ error: "We could not send your enquiry. Please call +34 952 907 386." }, { status: 500 });
