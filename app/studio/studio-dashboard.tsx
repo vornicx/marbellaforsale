@@ -146,6 +146,8 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
   const propertyDemand = useMemo(() => managedProperties.map((property) => ({ property, leads: leads.filter((lead) => lead.propertyRef === property.ref).length })).sort((a, b) => b.leads - a.leads), [leads, managedProperties]);
   const contentScores = useMemo(() => managedProperties.map((property) => ({ property, score: propertyScore(property) })), [managedProperties]);
   const averageContentScore = contentScores.length ? Math.round(contentScores.reduce((sum, item) => sum + item.score, 0) / contentScores.length) : 0;
+  const showcaseProperty = propertyDemand[0]?.property || managedProperties[0];
+  const nextViewing = viewingLeads[0] || null;
 
   useEffect(() => {
     if (!selectedLead && !selectedProperty && !creatingLead) return;
@@ -260,7 +262,22 @@ export function StudioDashboard({ initialLeads, initialProperties, initialNow, u
       {notice && <p className="studio-toast" role="status"><span>✓</span>{notice}</p>}
 
       {section === "overview" && <>
-        <div className="studio-attention"><div><span>Today&apos;s focus</span><strong>{dueActions.length ? `${dueActions.length} follow-up${dueActions.length === 1 ? "" : "s"} due within 24 hours` : "Every opportunity is on schedule"}</strong></div><button onClick={() => openEnquiries()}>{dueActions.length ? "Review priorities" : "Open pipeline"}<ArrowIcon /></button></div>
+        <section className="studio-command-hero">
+          <div className="studio-command-media">
+            {showcaseProperty && <img src={showcaseProperty.image} alt={showcaseProperty.title} width="1500" height="930" decoding="async" />}
+            <div className="studio-command-shade" />
+            <div className="studio-command-copy">
+              <span>Private portfolio · Live command</span>
+              <h2>Every detail,<br /><em>under control.</em></h2>
+              {showcaseProperty && <button type="button" onClick={() => { setSection("properties"); setSelectedPropertyId(showcaseProperty.id); }}><span><b>Most requested residence</b>{showcaseProperty.title}</span><ArrowIcon /></button>}
+            </div>
+          </div>
+          <aside className="studio-daily-brief">
+            <div className="studio-brief-date"><span>Today in Marbella</span><time>{new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "long", timeZone: "Europe/Madrid" }).format(new Date(initialNow))}</time></div>
+            <div className="studio-brief-focus"><span>Immediate focus</span><strong>{dueActions.length ? `${dueActions.length} follow-up${dueActions.length === 1 ? "" : "s"} due within 24 hours` : "Every opportunity is on schedule"}</strong><button type="button" onClick={() => openEnquiries()}>{dueActions.length ? "Review priorities" : "Open pipeline"}<ArrowIcon /></button></div>
+            <div className="studio-brief-viewing"><span>Next private viewing</span>{nextViewing ? <button type="button" onClick={() => setSelectedLeadId(nextViewing.id)}><time>{formatDate(nextViewing.viewingAt, false)} · {new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit" }).format(new Date(nextViewing.viewingAt || ""))}</time><strong>{nextViewing.propertyTitle || "Confidential consultation"}</strong><small>{nextViewing.firstName} {nextViewing.lastName}</small><ArrowIcon /></button> : <p>No private viewings are currently scheduled.</p>}</div>
+          </aside>
+        </section>
         <div className="studio-kpis">
           <button className="kpi" onClick={() => openEnquiries("new")}><span>New enquiries</span><strong>{leads.filter((lead) => lead.status === "new").length}</strong><small>Awaiting first contact</small><i className="kpi-trend">Live</i><ArrowIcon /></button>
           <button className="kpi" onClick={() => openEnquiries("qualified")}><span>Qualified buyers</span><strong>{leads.filter((lead) => ["qualified", "viewing"].includes(lead.status)).length}</strong><small>Active purchase intent</small><i className="kpi-trend">Pipeline</i><ArrowIcon /></button>
