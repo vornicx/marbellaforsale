@@ -360,9 +360,17 @@ h2 em, h1 em { font-weight: 400; font-style: italic; }
 .form-success h3 { margin: 22px 0 12px; font-size: 42px; }
 .form-success p { color: #68736e; }
 .form-success small { display: block; margin-top: 18px; font-size: 8px; letter-spacing: .14em; color: #7b8580; text-transform: uppercase; }
-.form-error { margin: -4px 0 20px; padding: 12px 14px; border-left: 2px solid #9a4d43; background: #f5e9e6; color: #7b332b; font-size: 12px; line-height: 1.5; }
+.form-error { margin: -4px 0 20px; padding: 16px 18px; border-left: 2px solid #9a4d43; background: #f5e9e6; color: #6f2e28; font-size: 12px; line-height: 1.55; }
+.form-error p { margin: 0; }
+.form-error > div { display: flex; flex-wrap: wrap; gap: 16px 24px; margin-top: 12px; }
+.form-error a { border-bottom: 1px solid currentColor; padding-bottom: 3px; font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
 .enquiry-form .consent a { border-bottom: 1px solid currentColor; }
 .enquiry-form .button:disabled { cursor: wait; opacity: .66; }
+.form-assurance { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px 20px; margin: 17px 0 0; color: #66736c; font-size: 9px; letter-spacing: .05em; }
+.form-assurance span { display: inline-flex; align-items: center; gap: 8px; }
+.form-assurance span::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: #8d7651; }
+.legal-copy h2 { margin: 44px 0 18px; scroll-margin-top: 110px; font-size: 38px; }
+.legal-copy h2:first-child { margin-top: 0; }
 
 .area-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .area-tile { position: relative; min-height: 560px; overflow: hidden; color: white; }
@@ -1256,4 +1264,59 @@ h2 em, h1 em { font-weight: 400; font-style: italic; }
   .studio-command-copy h2 { font-size: 48px; }
   .studio-kpis { grid-template-columns: 1fr; }
   .studio .kpi { min-height: 151px; }
+}
+
+/* Readability floor — preserve the editorial scale without sacrificing usable text. */
+.search-panel label span,
+.property-badge,
+.view-property,
+.compare-button,
+.property-info p,
+.property-specs,
+.signature-points span,
+.seller-services span,
+.footer-column > span,
+.footer-bottom,
+.catalog-toolbar label,
+.more-filter,
+.catalog-controls button,
+.advanced-filters label:not(.saved-toggle),
+.saved-toggle,
+.advanced-filters > button,
+.comparison-tray-label span,
+.comparison-actions > button:first-child,
+.comparison-labels span,
+.comparison-column > a,
+.gallery-open-all,
+.enquiry-form label,
+.enquiry-form .consent,
+.form-success small,
+.form-assurance,
+.editorial-card .index { font-size: 10px; }
+
+.studio .panel-head > div > span,
+.studio .pipeline-toolbar > div > span,
+.studio .pipeline-tools label > span:not(.sr-only),
+.studio .pipeline-head,
+.studio .priority-label,
+.studio .drawer-form label,
+.studio .drawer-contact dt,
+.studio .property-manager-summary > div > span,
+.studio .property-manager-toolbar > div button,
+.studio .property-editor-preview .property-state,
+.studio .managed-property-copy small,
+.studio .property-editor-form label > small,
+.studio .property-upload-control small,
+.studio .studio-drawer > header span,
+.studio .drawer-context > span,
+.studio .studio-demand > button small,
+.studio .studio-demand > button > b,
+.studio .insight-summary span,
+.studio .content-overview > div:nth-child(2) > span { font-size: 10px; }
+
+@media (max-width: 800px) {
+  .studio-sidebar .wordmark span { font-size: 8px; }
+  .studio-sidebar nav button > b { font-size: 9px; }
+  .studio .kpi > span,
+  .panel-head button { font-size: 10px; }
 }

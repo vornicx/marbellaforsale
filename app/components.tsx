@@ -132,7 +132,7 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
           <Link className="nav-mobile-contact" href="/contact" onClick={() => setOpen(false)}>Speak to an advisor <ArrowIcon /></Link>
         </nav>
         <div className="header-actions">
-          <button className="language" type="button" aria-label="Change language">EN <span>⌄</span></button>
+          <span className="language" aria-label="Website language: English">EN</span>
           <Link href="/properties?saved=true" className="saved-link" aria-label={`${savedCount} saved properties`}><HeartIcon />{savedCount > 0 && <span>{savedCount}</span>}</Link>
           <Link href="/contact" className="header-contact">Speak to us</Link>
         </div>
@@ -181,7 +181,7 @@ export function Footer() {
         <div className="footer-column"><span>Company</span><Link href="/about">About us</Link><Link href="/sell">Sell a property</Link><Link href="/contact">Contact</Link><Link href="/studio">Owner studio</Link></div>
         <div className="footer-column contact-column"><span>Visit us</span><p>Edificio Marina Banús, Bl. 4 Local 8<br />Calle Francisco Villalón<br />29660 Puerto Banús, Marbella</p><a href="tel:+34952907386">+34 952 907 386</a><a href="mailto:info@marbellaforsale.com">info@marbellaforsale.com</a></div>
       </div>
-      <div className="footer-bottom shell"><span>© 2026 Marbella For Sale S.L.</span><div><Link href="/privacy">Privacy</Link><Link href="/privacy">Cookies</Link><Link href="/privacy">Legal</Link></div><span>ES · EN · FR · DE · NL</span></div>
+      <div className="footer-bottom shell"><span>© 2026 Marbella For Sale S.L.</span><div><Link href="/privacy">Privacy</Link><Link href="/privacy#cookies">Cookies</Link><Link href="/privacy#legal">Legal</Link></div><span>English service · International clients</span></div>
     </footer>
   );
 }
@@ -380,6 +380,8 @@ export function EnquiryForm({ propertyTitle, propertyRef, source = "contact" }: 
   const [reference, setReference] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [fallbackEmail, setFallbackEmail] = useState("");
+  const submissionIdRef = useRef("");
 
   async function submitEnquiry(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -387,27 +389,56 @@ export function EnquiryForm({ propertyTitle, propertyRef, source = "contact" }: 
     setError("");
     const form = event.currentTarget;
     const values = new FormData(form);
+    const firstName = String(values.get("firstName") || "").trim();
+    const lastName = String(values.get("lastName") || "").trim();
+    const email = String(values.get("email") || "").trim();
+    const phone = String(values.get("phone") || "").trim();
+    const message = String(values.get("message") || "").trim();
+    const subject = `Private enquiry${propertyRef ? ` · ${propertyRef}` : ""} · ${firstName} ${lastName}`;
+    const emailBody = [
+      propertyTitle ? `Property: ${propertyTitle}` : "",
+      propertyRef ? `Reference: ${propertyRef}` : "",
+      `Name: ${firstName} ${lastName}`,
+      `Email: ${email}`,
+      `Phone: ${phone}`,
+      "",
+      message,
+    ].filter(Boolean).join("\n");
+    setFallbackEmail(`mailto:info@marbellaforsale.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`);
+    if (!submissionIdRef.current) submissionIdRef.current = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : "";
     try {
       const response = await fetchWithTimeout("/api/enquiries", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(window.location.hostname === "terminal.local" ? { "x-mfs-e2e": "1" } : {}),
+        },
         body: JSON.stringify({
-          firstName: values.get("firstName"),
-          lastName: values.get("lastName"),
-          email: values.get("email"),
-          phone: values.get("phone"),
-          message: values.get("message"),
+          submissionId: submissionIdRef.current || undefined,
+          firstName,
+          lastName,
+          email,
+          phone,
+          message,
           privacyAccepted: values.get("privacy") === "accepted",
           source,
           propertyTitle,
           propertyRef,
         }),
       });
-      const result = await response.json() as { error?: string; reference?: string };
+      const contentType = response.headers.get("content-type") || "";
+      const result = contentType.includes("application/json")
+        ? await response.json() as { error?: string; reference?: string }
+        : { error: "The enquiry service returned an unexpected response." };
       if (!response.ok || !result.reference) throw new Error(result.error || "Unable to send enquiry.");
       setReference(result.reference);
+      form.reset();
+      submissionIdRef.current = "";
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "Unable to send enquiry.");
+      const message = submissionError instanceof Error ? submissionError.message : "Unable to send enquiry.";
+      setError(message === "The request took too long. Please try again."
+        ? "The secure connection took too long. Please try once more or use the prepared email below."
+        : `${message} Your details remain in this form and have also been prepared as an email.`);
     } finally {
       setSending(false);
     }
@@ -415,15 +446,16 @@ export function EnquiryForm({ propertyTitle, propertyRef, source = "contact" }: 
 
   if (reference) return <div className="form-success" aria-live="polite"><span><CheckIcon /></span><h3>Thank you.</h3><p>Your private enquiry has been received. One of our Marbella advisors will contact you personally within one business day.</p><small>Reference {reference}</small></div>;
   return (
-    <form className="enquiry-form" onSubmit={submitEnquiry}>
+    <form className="enquiry-form" onSubmit={submitEnquiry} aria-busy={sending}>
       {propertyTitle && <input type="hidden" name="property" value={propertyTitle} />}
-      <div className="form-row"><label>First name<input required name="firstName" /></label><label>Last name<input required name="lastName" /></label></div>
-      <label>Email address<input required type="email" name="email" /></label>
-      <label>Phone number<input required type="tel" name="phone" placeholder="+34" /></label>
-      <label>How can we help?<textarea name="message" defaultValue={propertyTitle ? `I would like more information about ${propertyTitle}.` : "I would like to discuss my property requirements."} /></label>
+      <div className="form-row"><label>First name<input required name="firstName" autoComplete="given-name" /></label><label>Last name<input required name="lastName" autoComplete="family-name" /></label></div>
+      <label>Email address<input required type="email" name="email" autoComplete="email" inputMode="email" /></label>
+      <label>Phone number<input required type="tel" name="phone" placeholder="+34" autoComplete="tel" inputMode="tel" /></label>
+      <label>How can we help?<textarea required minLength={10} name="message" defaultValue={propertyTitle ? `I would like more information about ${propertyTitle}.` : "I would like to discuss my property requirements."} /></label>
       <label className="consent"><input required type="checkbox" name="privacy" value="accepted" /> <span>I have read and accept the <Link href="/privacy">privacy policy</Link>.</span></label>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && <div className="form-error" role="alert"><p>{error}</p><div>{fallbackEmail && <a href={fallbackEmail}>Send prepared email</a>}<a href="tel:+34952907386">Call +34 952 907 386</a></div></div>}
       <button className="button button-dark" type="submit" disabled={sending}>{sending ? "Sending securely…" : "Send private enquiry"} {!sending && <ArrowIcon />}</button>
+      <p className="form-assurance"><span>Encrypted submission</span><span>Handled personally</span><span>Response within one business day</span></p>
     </form>
   );
 }

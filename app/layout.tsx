@@ -43,6 +43,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_GB",
   },
+  icons: { icon: "/icon.svg" },
   other: { "codex-preview": "development" },
 };
 
