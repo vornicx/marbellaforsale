@@ -7,7 +7,6 @@ export const revalidate = 300;
 
 export default async function Home() {
   const properties = await getManagedProperties();
-  const propertyCount = properties.length;
   const schema = {
     "@context": "https://schema.org",
     "@type": "RealEstateAgent",
@@ -57,15 +56,21 @@ export default async function Home() {
           <div className="scroll-cue"><span>Discover</span><i /></div>
         </section>
 
+        <section className="buyer-proof-bar shell" aria-label="Marbella For Sale local advisory credentials">
+          <div><small>Founder-led</small><strong>Nicolas de Zutter</strong></div>
+          <div><small>Based in</small><strong>Puerto Banús</strong></div>
+          <div><small>Approach</small><strong>Personal, buyer-led advice</strong></div>
+        </section>
+
         <section className="featured featured-first section shell">
           <div className="section-heading split-heading">
             <div>
               <p className="eyebrow">A curated first look</p>
               <h2>Exceptional homes</h2>
-              <p className="selection-note">A focused selection across Marbella, Benahavís and the Costa del Sol, with direct access to the full property search.</p>
+              <p className="selection-note">A focused selection across Marbella, Benahavís and the Costa del Sol, with direct access to the wider property search.</p>
             </div>
             <div className="heading-action">
-              <span>{propertyCount} current {propertyCount === 1 ? "residence" : "residences"}</span>
+              <span>Curated selection · private search</span>
               <Link className="outline-link" href="/properties">View all properties <ArrowIcon /></Link>
             </div>
           </div>
@@ -75,9 +80,9 @@ export default async function Home() {
         </section>
 
         <section className="advisory-proof shell" aria-label="Marbella For Sale advisory strengths">
-          <article><span>01</span><strong>Puerto Banús office</strong><p>A direct local base in the market you are buying into.</p></article>
-          <article><span>02</span><strong>Buyer-led search</strong><p>Open-market discovery and discreet opportunities shaped around your brief.</p></article>
-          <article><span>03</span><strong>One point of contact</strong><p>Personal guidance from first shortlist through viewing and completion.</p></article>
+          <article><span>01</span><strong>20+ years in Spain</strong><p>A long-term local perspective behind the founder-led advisory.</p></article>
+          <article><span>02</span><strong>Puerto Banús office</strong><p>A direct local base in the market you are buying into.</p></article>
+          <article><span>03</span><strong>Buyer-led search</strong><p>A considered shortlist shaped around the brief, not around pressure to transact.</p></article>
         </section>
 
         <section className="intro-story section shell">
@@ -100,7 +105,7 @@ export default async function Home() {
           <div className="signature-card">
             <p className="eyebrow light">Private search</p>
             <h2>The right property<br />may never reach<br /><em>the open market.</em></h2>
-            <div className="signature-points"><span>Entire market access</span><span>Discreet opportunities</span><span>One dedicated advisor</span></div>
+            <div className="signature-points"><span>Wider market search</span><span>Discreet opportunities</span><span>One dedicated advisor</span></div>
             <Link className="button button-light" href="/contact">Begin a private search <ArrowIcon /></Link>
           </div>
         </section>
