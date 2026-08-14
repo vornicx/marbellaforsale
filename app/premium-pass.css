@@ -438,10 +438,10 @@
     text-align: left;
   }
 
-  /* On mobile, the location is already clear in the brand/search. Remove duplicate copy. */
+  /* On mobile, keep one decisive property-discovery action and remove duplicate copy. */
   .hero-content .eyebrow,
   .hero-copyline > p,
-  .hero-primary {
+  .hero-secondary {
     display: none;
   }
 
@@ -465,12 +465,10 @@
     margin-top: 0;
   }
 
-  .hero-secondary {
+  .hero-primary {
     min-height: 44px;
     padding-inline: 16px;
-    border-color: rgba(255,255,255,.58);
     font-size: 12px;
-    backdrop-filter: blur(10px);
   }
 
   .hero-search {
