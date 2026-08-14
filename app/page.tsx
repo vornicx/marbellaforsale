@@ -85,6 +85,30 @@ export default async function Home() {
           <article><span>03</span><strong>Buyer-led search</strong><p>A considered shortlist shaped around the brief, not around pressure to transact.</p></article>
         </section>
 
+        <section className="client-voices section shell" aria-label="Marbella For Sale client reviews">
+          <div className="client-voices-heading">
+            <div><p className="eyebrow">Client perspective</p><h2>Trust is built<br /><em>property by property.</em></h2></div>
+            <p>Selected experiences already published by Marbella For Sale through its Google Reviews showcase.</p>
+          </div>
+          <div className="client-voices-grid">
+            <article>
+              <span>01</span>
+              <p>Kristina chose the team over agents from her home market to shape the strategy for a Costa del Sol holiday home.</p>
+              <footer><strong>Kristina Özmen</strong><small>Sweden · Google review</small></footer>
+            </article>
+            <article>
+              <span>02</span>
+              <p>Mathias highlights the team&apos;s welcome, market knowledge and commitment to helping clients reach the result they came for.</p>
+              <footer><strong>Mathias Driessen</strong><small>Belgium · Google review</small></footer>
+            </article>
+            <article>
+              <span>03</span>
+              <p>RoMo bought the apartment shown at the first meeting and specifically praises the support that continued after the sale.</p>
+              <footer><strong>RoMo Boonstra-Jagt</strong><small>Switzerland · Google review</small></footer>
+            </article>
+          </div>
+        </section>
+
         <section className="intro-story section shell">
           <div className="intro-portrait">
             <img src="/images/editorial/not-simply-property.webp" alt="Contemporary luxury residence overlooking the Mediterranean" width="1920" height="1280" loading="lazy" decoding="async" />
