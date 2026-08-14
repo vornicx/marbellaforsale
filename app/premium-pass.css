@@ -2,6 +2,8 @@
    Keeps the existing art direction while strengthening first-view clarity,
    property discovery, mobile ergonomics and conversion confidence. */
 
+.footer .footer-column a[href="/studio"] { display: none; }
+
 .hero-content {
   position: absolute;
   inset: auto 0 188px;
