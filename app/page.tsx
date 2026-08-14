@@ -16,6 +16,7 @@ export default async function Home() {
     telephone: "+34 952 907 386",
     email: "info@marbellaforsale.com",
     description: "Luxury property advisory and curated homes for sale across Marbella and the Costa del Sol.",
+    founder: { "@type": "Person", name: "Nicolas de Zutter" },
     address: {
       "@type": "PostalAddress",
       streetAddress: "Edificio Marina Banús Bl.4 Local 8, Calle Francisco Villalón",
@@ -124,7 +125,7 @@ export default async function Home() {
           <div className="market-panel">
             <p className="eyebrow light">Market intelligence · 2026</p>
             <h2>Informed decisions.<br /><em>Made with confidence.</em></h2>
-            <div className="market-stats"><div><strong>20+</strong><span>Years of local market knowledge</span></div><div><strong>10</strong><span>Prime Costa del Sol areas covered</span></div><div><strong>360°</strong><span>Support from search to completion</span></div></div>
+            <div className="market-stats"><div><strong>20+</strong><span>Years in Spain behind the founder&apos;s perspective</span></div><div><strong>10</strong><span>Prime Costa del Sol areas covered</span></div><div><strong>360°</strong><span>Support from search to completion</span></div></div>
             <Link className="text-link" href="/guides">Explore our buyer&apos;s guides <ArrowIcon /></Link>
           </div>
         </section>
