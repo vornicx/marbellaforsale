@@ -306,8 +306,52 @@ canvas {
   }
 
   .managed-property-card {
-    grid-template-columns: 84px minmax(0, 1fr) auto !important;
+    width: 100%;
+    grid-template-columns: 84px minmax(0, 1fr) 20px !important;
     gap: 12px;
+  }
+
+  .managed-property-card > .managed-property-image {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+
+  .managed-property-card > .managed-property-copy,
+  .managed-property-card > .property-state {
+    grid-column: 2;
+  }
+
+  .managed-property-card > svg {
+    grid-column: 3;
+    grid-row: 1 / 3;
+  }
+
+  .studio-demand > button {
+    grid-template-columns: 20px 72px minmax(0, 1fr) 18px !important;
+    gap: 10px;
+  }
+
+  .studio-demand > button > span { grid-column: 1; }
+  .studio-demand > button > img { grid-column: 2; }
+  .studio-demand > button > div { grid-column: 3; }
+  .studio-demand > button > svg { grid-column: 4; }
+
+  .content-overview {
+    grid-template-columns: 92px minmax(0, 1fr) !important;
+  }
+
+  .content-overview > aside {
+    grid-column: 1 / -1 !important;
+  }
+
+  .content-audit-list,
+  .demand-table {
+    overflow-x: hidden;
+  }
+
+  .content-audit-list > button,
+  .demand-table > button {
+    min-width: 0 !important;
   }
 
   .managed-property-card time {
@@ -345,12 +389,19 @@ canvas {
   }
 
   .managed-property-card {
-    grid-template-columns: 72px minmax(0, 1fr) !important;
+    grid-template-columns: 72px minmax(0, 1fr) 18px !important;
   }
 
-  .managed-property-card > .property-state,
-  .managed-property-card > svg {
+  .managed-property-card > .property-state {
     grid-column: 2;
+  }
+
+  .managed-property-card > svg {
+    grid-column: 3;
+  }
+
+  .studio-demand > button {
+    grid-template-columns: 18px 64px minmax(0, 1fr) 16px !important;
   }
 
   .drawer-actions {
