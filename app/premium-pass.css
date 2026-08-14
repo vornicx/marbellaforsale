@@ -167,12 +167,29 @@
 .saved-link,
 .header-contact,
 .text-link,
-.outline-link {
+.outline-link,
+.site-header .wordmark,
+.footer-wordmark,
+.property-info h3 a,
+.footer-bottom a {
   min-height: 44px;
 }
 
 .saved-link {
   min-width: 44px;
+}
+
+.site-header .wordmark,
+.footer-wordmark,
+.property-info h3 a,
+.footer-bottom a {
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-header .wordmark,
+.footer-wordmark {
+  justify-content: center;
 }
 
 .site-header nav a {
@@ -409,7 +426,9 @@
   .text-link,
   .outline-link,
   .button,
-  .footer-column a {
+  .footer-column a,
+  .footer-bottom a,
+  .property-info h3 a {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
@@ -440,8 +459,8 @@
   }
 
   .wordmark span {
-    font-size: 10px;
-    letter-spacing: .35em;
+    font-size: 12px;
+    letter-spacing: .3em;
   }
 
   .site-header nav a {
