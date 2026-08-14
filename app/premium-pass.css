@@ -163,6 +163,29 @@
   line-height: 1.55;
 }
 
+.founder-signature {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 5px;
+  margin-top: 42px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.founder-signature strong {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 450;
+}
+
+.founder-signature span {
+  color: #75817b;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
 /* Interaction areas stay generous without making the interface visually heavy. */
 .saved-link,
 .header-contact,
@@ -386,6 +409,14 @@
   }
 
   .advisory-proof p {
+    font-size: 12px;
+  }
+
+  .founder-signature {
+    margin-top: 28px;
+  }
+
+  .founder-signature span {
     font-size: 12px;
   }
 
