@@ -27,7 +27,7 @@
 }
 
 .hero-copyline {
-  width: min(760px, 100%);
+  width: min(780px, 100%);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -46,7 +46,7 @@
 .hero-actions {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   flex: none;
 }
 
@@ -58,10 +58,12 @@
   justify-content: center;
   gap: 18px;
   padding: 0 20px;
+  border: 1px solid transparent;
   font-size: 12px;
   font-weight: 650;
   letter-spacing: .1em;
   text-transform: uppercase;
+  transition: background .25s ease, color .25s ease, border-color .25s ease;
 }
 
 .hero-primary {
@@ -70,18 +72,28 @@
   box-shadow: 0 16px 40px rgba(4,15,12,.18);
 }
 
+.hero-secondary {
+  border-color: rgba(255,255,255,.48);
+  color: white;
+  background: rgba(10,24,20,.12);
+  backdrop-filter: blur(8px);
+}
+
+.hero-primary:hover {
+  background: white;
+}
+
+.hero-secondary:hover {
+  border-color: rgba(255,255,255,.86);
+  background: rgba(255,255,255,.08);
+}
+
 .hero-primary svg,
 .hero-secondary svg {
   width: 19px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.4;
-}
-
-.hero-secondary {
-  padding-inline: 4px;
-  border-bottom: 1px solid rgba(255,255,255,.72);
-  color: white;
 }
 
 .hero-search {
@@ -103,9 +115,48 @@
   font-size: 18px;
 }
 
-/* First content after the hero is inventory, not brand exposition. */
+/* Proof sits directly after the decision surface, before editorial storytelling. */
+.buyer-proof-bar {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-bottom: 1px solid var(--line);
+}
+
+.buyer-proof-bar > div {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 20px clamp(18px, 3vw, 38px);
+  border-right: 1px solid var(--line);
+}
+
+.buyer-proof-bar > div:first-child {
+  padding-left: 0;
+}
+
+.buyer-proof-bar > div:last-child {
+  border-right: 0;
+}
+
+.buyer-proof-bar small {
+  color: #7b8781;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.buyer-proof-bar strong {
+  color: var(--deep);
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 450;
+}
+
+/* First main content after proof is inventory, not brand exposition. */
 .featured-first {
-  padding-top: 108px;
+  padding-top: 92px;
   padding-bottom: 128px;
 }
 
@@ -215,6 +266,12 @@
   justify-content: center;
 }
 
+.footer-bottom a {
+  min-width: 44px;
+  justify-content: center;
+  padding-inline: 3px;
+}
+
 .site-header nav a {
   min-height: 44px;
   display: inline-flex;
@@ -269,62 +326,55 @@
   }
 
   .hero-media img {
-    object-position: 58% center;
+    object-position: 60% center;
   }
 
   .hero-shade {
     background:
-      linear-gradient(180deg, rgba(7,20,17,.48), rgba(7,20,17,.07) 30%, rgba(7,20,17,.28) 58%, rgba(7,20,17,.72)),
-      radial-gradient(circle at 58% 32%, transparent 0, rgba(7,20,17,.18) 65%);
+      linear-gradient(180deg, rgba(7,20,17,.5), rgba(7,20,17,.07) 30%, rgba(7,20,17,.25) 54%, rgba(7,20,17,.78)),
+      radial-gradient(circle at 60% 30%, transparent 0, rgba(7,20,17,.2) 68%);
   }
 
   .hero-content {
-    inset: auto 18px 168px;
+    inset: auto 18px 174px;
     width: auto;
     padding: 0;
     text-align: left;
   }
 
-  .hero-content .eyebrow {
-    margin-bottom: 12px;
-    font-size: 12px;
-    line-height: 1.35;
-    letter-spacing: .13em;
+  /* On mobile, the location is already clear in the brand/search. Remove duplicate copy. */
+  .hero-content .eyebrow,
+  .hero-copyline > p,
+  .hero-primary {
+    display: none;
   }
 
   .hero h1 {
-    max-width: 360px;
+    max-width: 345px;
     margin: 0;
-    font-size: clamp(48px, 14vw, 61px);
-    line-height: .88;
+    color: white;
+    font-size: clamp(47px, 13.2vw, 58px);
+    line-height: .9;
     letter-spacing: -.035em;
+    text-shadow: 0 2px 20px rgba(4,15,12,.2);
   }
 
   .hero-copyline {
     display: block;
     width: 100%;
-    margin-top: 16px;
-  }
-
-  .hero-copyline > p {
-    max-width: 340px;
-    font-size: 13px;
-    line-height: 1.5;
+    margin-top: 18px;
   }
 
   .hero-actions {
-    gap: 16px;
-    margin-top: 15px;
+    margin-top: 0;
   }
 
-  .hero-primary,
   .hero-secondary {
     min-height: 44px;
+    padding-inline: 16px;
+    border-color: rgba(255,255,255,.58);
     font-size: 12px;
-  }
-
-  .hero-primary {
-    padding-inline: 17px;
+    backdrop-filter: blur(10px);
   }
 
   .hero-search {
@@ -367,8 +417,39 @@
     font-size: 12px;
   }
 
+  .buyer-proof-bar {
+    min-height: 78px;
+    grid-template-columns: 1fr 1fr;
+    width: calc(100% - 36px);
+  }
+
+  .buyer-proof-bar > div {
+    padding: 16px 12px;
+  }
+
+  .buyer-proof-bar > div:first-child {
+    padding-left: 0;
+  }
+
+  .buyer-proof-bar > div:nth-child(2) {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .buyer-proof-bar > div:nth-child(3) {
+    display: none;
+  }
+
+  .buyer-proof-bar small {
+    font-size: 10px;
+  }
+
+  .buyer-proof-bar strong {
+    font-size: 17px;
+  }
+
   .featured-first {
-    padding-top: 76px;
+    padding-top: 68px;
     padding-bottom: 88px;
   }
 
@@ -501,18 +582,10 @@
 
 @media (max-width: 380px) {
   .hero-content {
-    bottom: 162px;
+    bottom: 170px;
   }
 
   .hero h1 {
-    font-size: 46px;
-  }
-
-  .hero-copyline > p {
-    display: none;
-  }
-
-  .hero-actions {
-    margin-top: 12px;
+    font-size: 45px;
   }
 }
