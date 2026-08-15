@@ -4,6 +4,7 @@ import "./globals.css";
 import "./premium-pass.css";
 import "./design-hardening.css";
 import "./mobile-home-hardening.css";
+import { OwnerStudioAccess } from "./owner-studio-access";
 
 const hanken = Hanken_Grotesk({
   variable: "--font-ui",
@@ -63,7 +64,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${hanken.variable} ${bodoni.variable}`}>{children}</body>
+      <body className={`${hanken.variable} ${bodoni.variable}`}>
+        {children}
+        <OwnerStudioAccess />
+      </body>
     </html>
   );
 }
