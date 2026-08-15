@@ -80,12 +80,12 @@ export function Header({ transparent = false, morphLogo = false }: { transparent
       frame = 0;
       const scroll = Math.max(window.scrollY, 0);
       const mobile = window.innerWidth <= 800;
-      const startTop = Math.min(Math.max(window.innerHeight * (mobile ? .27 : .28), mobile ? 150 : 132), mobile ? 240 : 260);
+      const startTop = Math.min(Math.max(window.innerHeight * (mobile ? .16 : .28), mobile ? 104 : 132), mobile ? 138 : 260);
       const endTop = mobile ? 20 : 29;
       const travelStart = mobile ? 56 : 72;
       const travelEnd = mobile ? 330 : 430;
       const progress = smoothstep(travelStart, travelEnd, scroll);
-      const startScale = mobile ? 2.65 : 4.2;
+      const startScale = mobile ? 1.85 : 4.2;
       const logoTop = startTop + (endTop - startTop) * progress;
       const logoScale = startScale + (1 - startScale) * progress;
       logo.style.transform = `translate3d(-50%, ${logoTop.toFixed(3)}px, 0) scale(${logoScale.toFixed(5)})`;
