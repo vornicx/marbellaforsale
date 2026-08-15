@@ -3,6 +3,7 @@ import { Bodoni_Moda, Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import "./premium-pass.css";
 import "./design-hardening.css";
+import "./mobile-home-hardening.css";
 
 const hanken = Hanken_Grotesk({
   variable: "--font-ui",
