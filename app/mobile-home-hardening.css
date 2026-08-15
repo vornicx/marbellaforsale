@@ -1,0 +1,83 @@
+/* Mobile home composition.
+   Keep the animated identity, claim and primary action in distinct visual zones. */
+@media (max-width: 800px) {
+  .site-header.is-morphing {
+    height: 70px;
+  }
+
+  .site-header.is-morphing .header-inner {
+    width: calc(100% - 32px);
+  }
+
+  .morph-wordmark {
+    transform: translate3d(-50%, clamp(104px, 16vh, 138px), 0) scale(1.85);
+  }
+
+  .hero {
+    height: min(100svh, 820px);
+    min-height: 680px;
+    max-height: 820px;
+  }
+
+  .hero-media img {
+    object-position: 58% center;
+  }
+
+  .hero-shade {
+    background:
+      linear-gradient(180deg, rgba(7,20,17,.52) 0%, rgba(7,20,17,.08) 28%, rgba(7,20,17,.12) 48%, rgba(7,20,17,.84) 100%),
+      radial-gradient(circle at 58% 31%, transparent 0, rgba(7,20,17,.18) 70%);
+  }
+
+  .hero-content {
+    inset: auto 20px max(38px, calc(env(safe-area-inset-bottom) + 24px));
+    width: auto;
+    padding: 0;
+  }
+
+  .hero-content .eyebrow {
+    display: block;
+    max-width: 300px;
+    margin-bottom: 15px;
+    color: rgba(255,255,255,.78);
+    font-size: 9px;
+    line-height: 1.35;
+    letter-spacing: .17em;
+  }
+
+  .hero h1 {
+    max-width: 340px;
+    font-size: clamp(44px, 12.6vw, 52px);
+    line-height: .91;
+    letter-spacing: -.04em;
+    text-wrap: balance;
+  }
+
+  .hero-copyline {
+    margin-top: 22px;
+  }
+
+  .hero-primary {
+    min-height: 52px;
+    gap: 24px;
+    padding-inline: 21px;
+    font-size: 10px;
+    letter-spacing: .12em;
+  }
+
+  /* The full property filters live on the destination page on small screens.
+     A single hero action avoids a clipped, three-row form under browser chrome. */
+  .hero-search {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .hero-content {
+    bottom: max(30px, calc(env(safe-area-inset-bottom) + 20px));
+  }
+
+  .hero h1 {
+    font-size: 44px;
+  }
+}
