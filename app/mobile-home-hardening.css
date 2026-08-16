@@ -2,7 +2,7 @@
    Keep the animated identity, claim and primary action in distinct visual zones. */
 @media (max-width: 800px) {
   .site-header.is-morphing {
-    height: 70px;
+    height: 60px;
   }
 
   .site-header.is-morphing .header-inner {
@@ -10,13 +10,13 @@
   }
 
   .morph-wordmark {
-    transform: translate3d(-50%, clamp(104px, 16vh, 138px), 0) scale(1.85);
+    transform: translate3d(-50%, clamp(84px, 12vh, 108px), 0) scale(1.65);
   }
 
   .hero {
-    height: min(100svh, 820px);
-    min-height: 680px;
-    max-height: 820px;
+    height: min(78svh, 640px);
+    min-height: 560px;
+    max-height: 640px;
   }
 
   .hero-media img {
