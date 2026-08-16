@@ -6,12 +6,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '23 * * * *'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/archic-control.yml'
-      - '.archic/control-worker.mjs'
-      - '.archic/github-self-publish.mjs'
 
 permissions:
   id-token: write
@@ -116,7 +110,10 @@ jobs:
           BASE_REF: ${{ github.event.repository.default_branch }}
           GITHUB_TOKEN: ${{ github.token }}
           NODE_OPTIONS: --import=./.archic/github-self-publish.mjs
-        run: node .archic/control-worker.mjs
+        run: |
+          cp .archic/control-worker.mjs "$RUNNER_TEMP/archic-control-worker.mjs"
+          sed -i 's/AbortSignal.timeout(60_000)/AbortSignal.timeout(110_000)/g' "$RUNNER_TEMP/archic-control-worker.mjs"
+          node "$RUNNER_TEMP/archic-control-worker.mjs"
       - name: Return evidence
         if: always() && steps.resolve.outputs.has_task == 'true'
         run: |
