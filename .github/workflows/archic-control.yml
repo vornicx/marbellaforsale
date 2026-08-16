@@ -54,43 +54,58 @@ jobs:
             exit 0
           fi
 
-          deployments="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
-            -H 'Accept: application/vnd.github+json' \
-            'https://api.github.com/repos/vornicx/archiccontrol/deployments?environment=Production&per_page=8')"
-          CONTROL_URL=""
-          while IFS= read -r statuses_url; do
-            [ -n "$statuses_url" ] || continue
-            status_payload="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
-              -H 'Accept: application/vnd.github+json' "$statuses_url")"
-            candidate="$(printf '%s' "$status_payload" | jq -r '[.[] | select(.state=="success")][0].environment_url // empty')"
-            if [[ "$candidate" == https://* ]]; then
-              CONTROL_URL="${candidate%/}"
-              break
-            fi
-          done < <(printf '%s' "$deployments" | jq -r '.[].statuses_url')
-
-          if [ -z "$CONTROL_URL" ]; then
-            echo "No successful Archic Control production deployment could be resolved." >&2
-            exit 1
-          fi
-
           oidc="$(curl --fail-with-body --silent --show-error \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=archic-control" | jq -r '.value')"
           [ -n "$oidc" ] && [ "$oidc" != "null" ] || { echo "GitHub OIDC token was not issued." >&2; exit 1; }
 
-          lease_file="$(mktemp)"
-          lease_status="$(curl --silent --show-error --retry 2 \
-            -o "$lease_file" -w '%{http_code}' \
-            -X POST "$CONTROL_URL/api/agents/repository-lease" \
-            -H "Authorization: Bearer $oidc" \
-            -H 'Content-Type: application/json' \
-            --data '{"supportedTaskTypes":["autofix"]}')"
-          lease="$(cat "$lease_file")"
-          rm -f "$lease_file"
-          if [[ "$lease_status" != 2* ]]; then
-            lease_error="$(printf '%s' "$lease" | jq -r '.error // "unknown Control lease error"' 2>/dev/null || printf '%s' 'unparseable Control lease error')"
-            echo "Archic Control lease rejected (HTTP $lease_status): $lease_error" >&2
+          candidates_file="$(mktemp)"
+          printf '%s\n' 'https://archiccontrol.vercel.app' > "$candidates_file"
+
+          deployments="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+            -H 'Accept: application/vnd.github+json' \
+            'https://api.github.com/repos/vornicx/archiccontrol/deployments?environment=Production&per_page=8')"
+          while IFS= read -r statuses_url; do
+            [ -n "$statuses_url" ] || continue
+            status_payload="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
+              -H 'Accept: application/vnd.github+json' "$statuses_url")"
+            printf '%s' "$status_payload" | jq -r '[.[] | select(.state=="success")][0].environment_url // empty'
+          done < <(printf '%s' "$deployments" | jq -r '.[].statuses_url') >> "$candidates_file"
+
+          lease=""
+          CONTROL_URL=""
+          last_error="No Archic Control endpoint was reachable."
+          while IFS= read -r candidate; do
+            [ -n "$candidate" ] || continue
+            candidate="${candidate%/}"
+            lease_file="$(mktemp)"
+            lease_status="$(curl --silent --show-error --retry 1 \
+              -o "$lease_file" -w '%{http_code}' \
+              -X POST "$candidate/api/agents/repository-lease" \
+              -H "Authorization: Bearer $oidc" \
+              -H 'Content-Type: application/json' \
+              --data '{"supportedTaskTypes":["autofix"]}' || true)"
+            response_body="$(cat "$lease_file" 2>/dev/null || true)"
+            rm -f "$lease_file"
+
+            if [[ "$lease_status" == 2* ]]; then
+              CONTROL_URL="$candidate"
+              lease="$response_body"
+              break
+            fi
+
+            response_error="$(printf '%s' "$response_body" | jq -r '.error // .message // "unparseable Control response"' 2>/dev/null || printf '%s' 'unparseable Control response')"
+            last_error="HTTP ${lease_status:-000} from $candidate: $response_error"
+            if [ "$lease_status" != "401" ] && [ "$lease_status" != "403" ] && [ "$lease_status" != "404" ] && [ "$lease_status" != "000" ]; then
+              echo "Archic Control lease rejected by application ($last_error)" >&2
+              rm -f "$candidates_file"
+              exit 1
+            fi
+          done < <(awk 'NF && !seen[$0]++' "$candidates_file")
+          rm -f "$candidates_file"
+
+          if [ -z "$CONTROL_URL" ]; then
+            echo "Archic Control lease endpoint unavailable: $last_error" >&2
             exit 1
           fi
 
