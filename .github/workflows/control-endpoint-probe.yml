@@ -1,0 +1,36 @@
+name: Archic Control Endpoint Probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/control-endpoint-probe.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probe canonical Control URL without leasing work
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          status="$(curl --silent --show-error --location \
+            -o "$response_file" -w '%{http_code}' \
+            -X POST 'https://archiccontrol.vercel.app/api/agents/repository-lease' \
+            -H 'Content-Type: application/json' \
+            --data '{"supportedTaskTypes":["autofix"]}' || true)"
+          body="$(cat "$response_file")"
+          rm -f "$response_file"
+          echo "HTTP $status"
+          echo "$body"
+          if printf '%s' "$body" | grep -q 'Missing GitHub OIDC bearer'; then
+            echo 'Canonical URL reaches Archic Control application.'
+            exit 0
+          fi
+          echo 'Canonical URL did not reach the expected application boundary.' >&2
+          exit 1
