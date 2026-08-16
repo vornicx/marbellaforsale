@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/archic-control.yml'
       - '.archic/control-worker.mjs'
+      - '.archic/github-self-publish.mjs'
 
 permissions:
   id-token: write
@@ -113,6 +114,8 @@ jobs:
         continue-on-error: true
         env:
           BASE_REF: ${{ github.event.repository.default_branch }}
+          GITHUB_TOKEN: ${{ github.token }}
+          NODE_OPTIONS: --import=./.archic/github-self-publish.mjs
         run: node .archic/control-worker.mjs
       - name: Return evidence
         if: always() && steps.resolve.outputs.has_task == 'true'
