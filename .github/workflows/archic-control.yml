@@ -60,7 +60,10 @@ jobs:
           [ -n "$oidc" ] && [ "$oidc" != "null" ] || { echo "GitHub OIDC token was not issued." >&2; exit 1; }
 
           candidates_file="$(mktemp)"
-          printf '%s\n' 'https://archiccontrol.vercel.app' > "$candidates_file"
+          printf '%s\n' \
+            'https://archiccontrol-archic.vercel.app' \
+            'https://archiccontrol.vercel.app' \
+            > "$candidates_file"
 
           deployments="$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors \
             -H 'Accept: application/vnd.github+json' \
@@ -96,6 +99,9 @@ jobs:
 
             response_error="$(printf '%s' "$response_body" | jq -r '.error // .message // "unparseable Control response"' 2>/dev/null || printf '%s' 'unparseable Control response')"
             last_error="HTTP ${lease_status:-000} from $candidate: $response_error"
+            if [ "$lease_status" = "503" ] && [ "$response_error" = "Persistence is not configured" ]; then
+              continue
+            fi
             if [ "$lease_status" != "401" ] && [ "$lease_status" != "403" ] && [ "$lease_status" != "404" ] && [ "$lease_status" != "000" ]; then
               echo "Archic Control lease rejected by application ($last_error)" >&2
               rm -f "$candidates_file"
